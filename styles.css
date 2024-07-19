@@ -232,7 +232,8 @@ body, html {
   
   .settings-panel h2 {
     color: #ffffff;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
+    font-weight: bold;
   }
   
   .setting-item {
@@ -242,8 +243,11 @@ body, html {
   
   .setting-item label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
     color: #ffffff;
+    height: 23px;
+    font-weight: semi-bold;
+    font-size: 20px;
   }
   
   .setting-item input {
@@ -260,15 +264,18 @@ body, html {
     background-color: #ef4444;
     color: white;
     border: none;
-    padding: 10px 20px;
+    padding: 12px 20px;
     text-align: center;
     text-decoration: none;
     display: inline-block;
     font-size: 16px;
+    font-weight: 500;
     cursor: pointer;
     border-radius: 5px;
-    margin-top: 20px;
-  }
+    width: 25%;
+    transition: background-color 0.3s ease;
+    margin-top: 30px;
+}
 
   .gmail-popup {
     width: 60%;
@@ -312,3 +319,128 @@ body, html {
     color: #ff4757;
 }
 
+/* Settings Panel */
+.settings-panel {
+    padding: 20px;
+    overflow-y: auto;
+  }
+  
+  .setting-item {
+    margin-bottom: 20px;
+  }
+  
+  
+  /* API Key Input */
+  .api-key-container {
+    display: flex;
+    align-items: center;
+  }
+  
+  #apiKey {
+    flex-grow: 1;
+    margin-right: 10px;
+    padding: 8px;
+    background-color: #40414f;
+    border: 1px solid #565869;
+    border-radius: 5px;
+    color: #ffffff;
+  }
+  
+  .toggle-api-key {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+  }
+  
+  .toggle-api-key svg {
+    width: 20px;
+    height: 20px;
+    color: #ffffff;
+  }
+  
+  /* Dropdown Selects */
+  select {
+    width: 30%;
+    padding: 8px;
+    background-color: #40414f;
+    border: 1px solid #565869;
+    border-radius: 5px;
+    color: #ffffff;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px top 50%;
+    background-size: 12px auto;
+  }
+  
+  /* Toggle Switch */
+  .toggle-container {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+  }
+  
+  .toggle-input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  .toggle-label {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+  
+  .toggle-label:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+  
+  .toggle-input:checked + .toggle-label {
+    background-color: #4285F4;
+  }
+  
+  .toggle-input:checked + .toggle-label:before {
+    transform: translateX(26px);
+  }
+  
+  /* Logout Button */
+  .logout-container {
+    margin-top: 20px;
+  }
+  
+  .logout-button {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    width: 100%;
+  }
+  
+  .logout-button:hover {
+    background-color: #dc2626;
+  }

@@ -15,6 +15,85 @@ document.addEventListener('DOMContentLoaded', async function() {
     const summarizeButton = document.getElementById('summarizeButton');
     const chatInputArea = document.getElementById('chatInputArea');
     const chatWindow = document.getElementById('chatWindow');
+    const toggleApiKey = document.getElementById('toggleApiKey');
+    const aiProvider = document.getElementById('aiProvider');
+
+    aiProvider.addEventListener('change', function() {
+        chrome.storage.sync.set({aiProvider: this.value}, function() {
+            console.log('AI Provider saved:', aiProvider.value);
+        });
+    });
+
+    // Load saved AI Provider
+    chrome.storage.sync.get(['aiProvider'], function(result) {
+        if (result.aiProvider) {
+            aiProvider.value = result.aiProvider;
+        }
+    });
+
+    function getUserInfo() {
+        chrome.identity.getAuthToken({ interactive: true }, function(token) {
+            if (chrome.runtime.lastError) {
+                console.error(chrome.runtime.lastError);
+                updateSettingsTitle(null);
+                return;
+            }
+            
+            fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('User data:', data);  // Log the entire data object
+                if (data.name) {
+                    updateSettingsTitle(data.name);
+                } else if (data.email) {
+                    const userName = data.email.split('@')[0];
+                    updateSettingsTitle(userName);
+                } else {
+                    console.log('User information not available');
+                    updateSettingsTitle(null);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching user info:', error);
+                updateSettingsTitle(null);
+            });
+        });
+    }
+    
+    function updateSettingsTitle(userName) {
+        const settingsTitle = document.getElementById('settingsTitle');
+        if (userName) {
+            settingsTitle.textContent = `Hello, ${userName}`;
+        } else {
+            settingsTitle.textContent = 'Settings';
+        }
+    }
+    
+    // Call this function when the popup opens
+    getUserInfo();
+
+    toggleApiKey.addEventListener('click', function() {
+        if (apiKeyInput.type === 'password') {
+            apiKeyInput.type = 'text';
+            toggleApiKey.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye-off">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>`;
+        } else {
+            apiKeyInput.type = 'password';
+            toggleApiKey.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>`;
+        }
+    });
+    document.getElementById('settingsPanel').addEventListener('click', function(event) {
+        event.stopPropagation();
+    });
 
     function getEmailThreadIdFromUrl(url) {
         const match = url.match(/#inbox\/([^/]+)/);
