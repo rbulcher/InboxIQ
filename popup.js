@@ -36,13 +36,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function initializeChat() {
-        const hasConversation = await conversationExists();
-        if (hasConversation) {
-            const conversation = await Storage.getCurrentConversation();
-            displayConversation(conversation);
-            showChatInput();
+        const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+        const isGmailDomain = tab.url.startsWith('https://mail.google.com');
+        const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url);
+    
+        if (isGmailDomain && hasOpenEmail) {
+            const hasConversation = await conversationExists();
+            if (hasConversation) {
+                const conversation = await Storage.getCurrentConversation();
+                displayConversation(conversation);
+                showChatInput();
+            } else {
+                showSummarizeButton();
+            }
         } else {
-            showSummarizeButton();
+            showExistingConversations();
         }
         updateConversationList();
     }
@@ -79,16 +87,28 @@ document.addEventListener('DOMContentLoaded', async function() {
                 inputArea.classList.remove('disabled');
                 gmailPopup.style.display = 'none';
                 initializeChat();
-            } else if (isGmailDomain) {
-                inputArea.classList.add('disabled');
-                showSummarizeButton();
-                gmailPopup.textContent = "Open an email / thread to use this tool";
-                gmailPopup.style.display = 'block';
             } else {
                 inputArea.classList.add('disabled');
-                showSummarizeButton();
-                gmailPopup.textContent = "Navigate to Gmail to use this tool";
+                summarizeButton.style.display = 'none';
+                if (isGmailDomain) {
+                    gmailPopup.textContent = "Open an email / thread to start a new conversation";
+                } else {
+                    gmailPopup.textContent = "Navigate to Gmail to start a new conversation";
+                }
                 gmailPopup.style.display = 'block';
+                updateConversationList();
+                showExistingConversations();
+            }
+        });
+    }
+
+    function showExistingConversations() {
+        Storage.getConversations().then(conversations => {
+            if (conversations.length > 0) {
+                chatWindow.innerHTML = '<div class="ai-message">Select a conversation from the sidebar to view its contents.</div>';
+                showChatInput();
+            } else {
+                chatWindow.innerHTML = '<div class="ai-message">No existing conversations. Start a new one in Gmail.</div>';
             }
         });
     }
@@ -170,14 +190,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             conversation.messages.push({role: 'assistant', content: aiResponse});
             await Storage.updateConversation(conversation);
             displayConversation(conversation);
-
+    
             showChatInput();
             updateConversationList();
         } else {
-            alert("Please open an email in Gmail to summarize.");
+            alert("Please open an email in Gmail to start a new conversation.");
         }
     }
-
     async function checkAuthStatus() {
         try {
             const token = await new Promise((resolve, reject) => {
@@ -258,6 +277,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     summarizeButton.addEventListener('click', summarizeEmail);
 
     sendButton.addEventListener('click', async function() {
+        const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+        const isGmailDomain = tab.url.startsWith('https://mail.google.com');
+        const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url);
+    
+        if (!isGmailDomain || !hasOpenEmail) {
+            alert("You can only add messages to conversations when viewing an email in Gmail.");
+            return;
+        }
+    
         const userMessage = userInput.value.trim();
         if (userMessage) {
             const conversation = await Storage.getCurrentConversation();
