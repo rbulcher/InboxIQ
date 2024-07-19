@@ -102,6 +102,11 @@ body, html {
     align-items: flex-end; /* Align items to the bottom */
 }
 
+.conversation-item.active {
+    background-color: #4285F4;
+    color: white;
+}
+
 #userInput {
     flex-grow: 1;
     margin-right: 10px;
@@ -185,6 +190,9 @@ body, html {
 }
 
 .conversation-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 10px;
     margin-bottom: 5px;
     background-color: #40444b;
@@ -290,13 +298,14 @@ body, html {
     cursor: not-allowed;
   }
 
-.delete-button {
+  .delete-button {
     background-color: transparent;
     border: none;
     color: #ff6b6b;
     font-size: 16px;
     cursor: pointer;
     padding: 0 5px;
+    margin-left: auto; /* This will push the button to the right */
 }
 
 .delete-button:hover {

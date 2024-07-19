@@ -1,12 +1,5 @@
 import { Storage } from './storage.js';
 
-document.getElementById('userInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault(); // Prevent default Enter behavior
-        document.getElementById('sendButton').click(); // Simulate a click on the send button
-    }
-});
-
 document.addEventListener('DOMContentLoaded', async function() {
     const loginContainer = document.getElementById('loginContainer');
     const mainContainer = document.getElementById('mainContainer');
@@ -77,29 +70,50 @@ document.addEventListener('DOMContentLoaded', async function() {
         checkGmailDomain();
     }
 
-    function checkGmailDomain() {
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            const currentUrl = tabs[0].url;
-            const isGmailDomain = currentUrl.startsWith('https://mail.google.com');
-            const hasOpenEmail = /#inbox\/[^/]+/.test(currentUrl);
+    async function checkGmailDomain() {
+        const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+        const currentUrl = tab.url;
+        const isGmailDomain = currentUrl.startsWith('https://mail.google.com');
+        const hasOpenEmail = /#inbox\/[^/]+/.test(currentUrl);
+    
+        if (isGmailDomain && hasOpenEmail) {
+            handleGmailEmailThread(currentUrl);
+        } else {
+            handleNonGmailOrInbox();
+        }
+    }
+    
+    async function handleGmailEmailThread(url) {
+        const threadId = getEmailThreadIdFromUrl(url);
+        const conversation = await Storage.getConversationById(threadId);
+    
+        if (conversation) {
+            await Storage.setCurrentConversation(conversation);
+            displayConversation(conversation);
+            showChatInput();
+        } else {
+            showSummarizeButton();
+        }
+        updateConversationList();
+    }
+    
+    async function handleNonGmailOrInbox() {
+        const conversations = await Storage.getConversations();
         
-            if (isGmailDomain && hasOpenEmail) {
-                inputArea.classList.remove('disabled');
-                gmailPopup.style.display = 'none';
-                initializeChat();
-            } else {
-                inputArea.classList.add('disabled');
-                summarizeButton.style.display = 'none';
-                if (isGmailDomain) {
-                    gmailPopup.textContent = "Open an email / thread to start a new conversation";
-                } else {
-                    gmailPopup.textContent = "Navigate to Gmail to start a new conversation";
-                }
-                gmailPopup.style.display = 'block';
-                updateConversationList();
-                showExistingConversations();
-            }
-        });
+        if (conversations.length > 0) {
+            const latestConversation = conversations[conversations.length - 1];
+            await Storage.setCurrentConversation(latestConversation);
+            displayConversation(latestConversation);
+            showChatInput();
+            gmailPopup.style.display = 'none';
+        } else {
+            chatWindow.innerHTML = '';
+            summarizeButton.style.display = 'none';
+            chatInputArea.style.display = 'none';
+            gmailPopup.textContent = "Navigate to Gmail and open an email to start a new conversation.";
+            gmailPopup.style.display = 'block';
+        }
+        updateConversationList();
     }
 
     function showExistingConversations() {
@@ -113,32 +127,37 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    function updateConversationList() {
+    async function updateConversationList() {
         const conversationList = document.getElementById('conversationList');
         conversationList.innerHTML = '';
         
-        Storage.getConversations().then(conversations => {
-            conversations.forEach(conv => {
-                const item = document.createElement('div');
-                item.className = 'conversation-item';
-                
-                const titleSpan = document.createElement('span');
-                const idString = String(conv.id);
-                titleSpan.textContent = `Conversation ${idString.slice(0, 8)}...`;
-                item.appendChild(titleSpan);
+        const conversations = await Storage.getConversations();
+        const currentConversation = await Storage.getCurrentConversation();
+        
+        conversations.forEach(conv => {
+            const item = document.createElement('div');
+            item.className = 'conversation-item';
+            if (currentConversation && conv.id === currentConversation.id) {
+                item.classList.add('active');
+            }
+            
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'conversation-title';
+            const idString = String(conv.id);
+            titleSpan.textContent = `Conversation -  ${idString.slice(-4)}`;
+            item.appendChild(titleSpan);
     
-                const deleteButton = document.createElement('button');
-                deleteButton.className = 'delete-button';
-                deleteButton.innerHTML = '&#x2715;'; // X symbol
-                deleteButton.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent triggering the conversation load
-                    deleteConversation(conv.id);
-                });
-                item.appendChild(deleteButton);
-    
-                item.addEventListener('click', () => loadConversation(conv.id));
-                conversationList.appendChild(item);
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-button';
+            deleteButton.innerHTML = '&#x2715;';
+            deleteButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteConversation(conv.id);
             });
+            item.appendChild(deleteButton);
+    
+            item.addEventListener('click', () => loadConversation(conv.id));
+            conversationList.appendChild(item);
         });
     }
     
@@ -146,26 +165,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (confirm('Are you sure you want to delete this conversation?')) {
             await Storage.deleteConversation(id);
             updateConversationList();
-            // If the deleted conversation was the current one, clear the chat window
             const currentConv = await Storage.getCurrentConversation();
             if (!currentConv || currentConv.id === id) {
-                document.getElementById('chatWindow').innerHTML = '';
+                chatWindow.innerHTML = '';
                 showSummarizeButton();
             }
         }
     }
 
     async function loadConversation(conversationId) {
-        const conversations = await Storage.getConversations();
-        const conversation = conversations.find(conv => conv.id === conversationId);
+        const conversation = await Storage.getConversationById(conversationId);
         if (conversation) {
+            await Storage.setCurrentConversation(conversation);
             displayConversation(conversation);
             showChatInput();
+            updateConversationList();
         }
     }
 
     function displayConversation(conversation) {
         chatWindow.innerHTML = '';
+    
         conversation.messages.forEach(message => {
             if (message.role !== 'system') {
                 const messageElement = document.createElement('div');
@@ -174,6 +194,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 chatWindow.appendChild(messageElement);
             }
         });
+    
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
@@ -181,22 +202,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
         
         if (tab.url.startsWith('https://mail.google.com') && /#inbox\/[^/]+/.test(tab.url)) {
-            const summary = "This is a placeholder for the email summary.";
-            
-            const conversation = await Storage.createConversation(summary);
-            displayConversation(conversation);
-            
-            const aiResponse = "This is a placeholder for the AI response to the summary.";
-            conversation.messages.push({role: 'assistant', content: aiResponse});
-            await Storage.updateConversation(conversation);
-            displayConversation(conversation);
+            const threadId = getEmailThreadIdFromUrl(tab.url);
+            let conversation = await Storage.getConversationById(threadId);
     
+            if (!conversation) {
+                const summary = "This is a placeholder for the email summary.";
+                conversation = await Storage.createConversation(summary);
+                
+                const aiResponse = "This is a placeholder for the AI response to the summary.";
+                conversation.messages.push({role: 'assistant', content: aiResponse});
+                await Storage.updateConversation(conversation);
+            }
+    
+            await Storage.setCurrentConversation(conversation);
+            displayConversation(conversation);
             showChatInput();
             updateConversationList();
         } else {
             alert("Please open an email in Gmail to start a new conversation.");
         }
     }
+
     async function checkAuthStatus() {
         try {
             const token = await new Promise((resolve, reject) => {
@@ -272,23 +298,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    loginButton.addEventListener('click', login);
-    logoutButton.addEventListener('click', logout);
-    summarizeButton.addEventListener('click', summarizeEmail);
-
-    sendButton.addEventListener('click', async function() {
-        const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-        const isGmailDomain = tab.url.startsWith('https://mail.google.com');
-        const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url);
-    
-        if (!isGmailDomain || !hasOpenEmail) {
-            alert("You can only add messages to conversations when viewing an email in Gmail.");
-            return;
-        }
-    
+    async function sendMessage() {
         const userMessage = userInput.value.trim();
         if (userMessage) {
             const conversation = await Storage.getCurrentConversation();
+            if (!conversation) {
+                alert("No active conversation. Please start a new conversation in Gmail.");
+                return;
+            }
+    
             conversation.messages.push({role: 'user', content: userMessage});
             await Storage.updateConversation(conversation);
             displayConversation(conversation);
@@ -299,6 +317,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             await Storage.updateConversation(conversation);
             displayConversation(conversation);
             updateConversationList();
+        }
+    }
+
+    loginButton.addEventListener('click', login);
+    logoutButton.addEventListener('click', logout);
+    summarizeButton.addEventListener('click', summarizeEmail);
+    sendButton.addEventListener('click', sendMessage);
+
+    userInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
         }
     });
 
