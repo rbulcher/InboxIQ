@@ -52,6 +52,7 @@ body, html {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
   #chatInputArea {
@@ -65,19 +66,45 @@ body, html {
   
   .chat-window {
     flex-grow: 1;
-    padding: 1em;
     overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+  .message {
+    max-width: 80%;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 15px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  .user-message {
+    background-color: #4285F4;
+    color: white;
+    align-self: flex-end;
+    margin-left: 20%;
+  }
+  
+  .ai-message {
+    background-color: #40414f;
+    color: white;
+    align-self: flex-start;
+    margin-right: 20%;
   }
   
   .input-area {
-    display: flex;
-    padding: 1em;
+    padding: 10px 20px; /* Reduced padding to give more space for input growth */
     background-color: #40414f;
-    align-items: center;
-    justify-content: center; /* Add this line */
-  }
-  #userInput {
+    display: flex;
+    align-items: flex-end; /* Align items to the bottom */
+}
+
+#userInput {
     flex-grow: 1;
+    margin-right: 10px;
     background-color: #40414f;
     border: 1px solid #565869;
     border-radius: 5px;
@@ -85,19 +112,23 @@ body, html {
     padding: 10px;
     font-size: 16px;
     resize: none;
-    height: 24px;
-    max-height: 200px;
+    min-height: 24px;
+    max-height: 200px; /* Adjust this value as needed */
     overflow-y: auto;
-  }
-  
-  #sendButton {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+#userInput::-webkit-scrollbar {
+    display: none; /* WebKit */
+}
+#sendButton {
     background-color: transparent;
+    color: white;
     border: none;
-    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 5px;
     cursor: pointer;
-    padding: 5px;
-    margin-left: 10px;
-  }
+}
   
   #sendButton svg {
     width: 20px;
@@ -248,7 +279,7 @@ body, html {
     align-items: center;
     justify-content: center;
     text-align: center;
-  }
+}
   
   .input-area.disabled {
     opacity: 0.5;
@@ -258,7 +289,7 @@ body, html {
   .input-area.disabled * {
     cursor: not-allowed;
   }
-  
+
 .delete-button {
     background-color: transparent;
     border: none;
@@ -271,3 +302,4 @@ body, html {
 .delete-button:hover {
     color: #ff4757;
 }
+

@@ -1,5 +1,12 @@
 import { Storage } from './storage.js';
 
+document.getElementById('userInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault(); // Prevent default Enter behavior
+        document.getElementById('sendButton').click(); // Simulate a click on the send button
+    }
+});
+
 document.addEventListener('DOMContentLoaded', async function() {
     const loginContainer = document.getElementById('loginContainer');
     const mainContainer = document.getElementById('mainContainer');
