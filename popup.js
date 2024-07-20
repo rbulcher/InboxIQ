@@ -1,438 +1,558 @@
-import { Storage } from './storage.js';
+import { Storage } from "./storage.js";
 
-document.addEventListener('DOMContentLoaded', async function() {
-    const loginContainer = document.getElementById('loginContainer');
-    const mainContainer = document.getElementById('mainContainer');
-    const settingsButton = document.getElementById('settingsButton');
-    const settingsPanel = document.getElementById('settingsPanel');
-    const logoutButton = document.getElementById('logoutButton');
-    const apiKeyInput = document.getElementById('apiKey');
-    const loginButton = document.getElementById('loginButton');
-    const sendButton = document.getElementById('sendButton');
-    const userInput = document.getElementById('userInput');
-    const gmailPopup = document.getElementById('gmailPopup');
-    const inputArea = document.getElementById('inputArea');
-    const summarizeButton = document.getElementById('summarizeButton');
-    const chatInputArea = document.getElementById('chatInputArea');
-    const chatWindow = document.getElementById('chatWindow');
-    const toggleApiKey = document.getElementById('toggleApiKey');
-    const aiProvider = document.getElementById('aiProvider');
+document.addEventListener("DOMContentLoaded", function () {
+	initializePopup();
+});
 
-    aiProvider.addEventListener('change', function() {
-        chrome.storage.sync.set({aiProvider: this.value}, function() {
-            console.log('AI Provider saved:', aiProvider.value);
-        });
-    });
+async function initializePopup() {
+	const loginContainer = document.getElementById("loginContainer");
+	const mainContainer = document.getElementById("mainContainer");
+	const settingsButton = document.getElementById("settingsButton");
+	const settingsPanel = document.getElementById("settingsPanel");
+	const logoutButton = document.getElementById("logoutButton");
+	const apiKeyInput = document.getElementById("apiKey");
+	const loginButton = document.getElementById("loginButton");
+	const sendButton = document.getElementById("sendButton");
+	const userInput = document.getElementById("userInput");
+	const gmailPopup = document.getElementById("gmailPopup");
+	const inputArea = document.getElementById("inputArea");
+	const summarizeButton = document.getElementById("summarizeButton");
+	const chatInputArea = document.getElementById("chatInputArea");
+	const chatWindow = document.getElementById("chatWindow");
+	const toggleApiKey = document.getElementById("toggleApiKey");
+	const aiProvider = document.getElementById("aiProvider");
+	const emailUnreadCount = document.getElementById("emailUnreadCount");
 
-    // Load saved AI Provider
-    chrome.storage.sync.get(['aiProvider'], function(result) {
-        if (result.aiProvider) {
-            aiProvider.value = result.aiProvider;
-        }
-    });
+	// Hide both containers initially
+	loginContainer.style.display = "none";
+	mainContainer.style.display = "none";
 
-    function getUserInfo() {
-        chrome.identity.getAuthToken({ interactive: true }, function(token) {
-            if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError);
-                updateSettingsTitle(null);
-                return;
-            }
-            
-            fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
-                headers: { Authorization: `Bearer ${token}` }
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('User data:', data);  // Log the entire data object
-                if (data.name) {
-                    updateSettingsTitle(data.name);
-                } else if (data.email) {
-                    const userName = data.email.split('@')[0];
-                    updateSettingsTitle(userName);
-                } else {
-                    console.log('User information not available');
-                    updateSettingsTitle(null);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching user info:', error);
-                updateSettingsTitle(null);
-            });
-        });
-    }
-    
-    function updateSettingsTitle(userName) {
-        const settingsTitle = document.getElementById('settingsTitle');
-        if (userName) {
-            settingsTitle.textContent = `Hello, ${userName}`;
-        } else {
-            settingsTitle.textContent = 'Settings';
-        }
-    }
-    
-    // Call this function when the popup opens
-    getUserInfo();
+	// Check auth status before showing any content
+	const userInfo = await checkAuthStatus();
 
-    toggleApiKey.addEventListener('click', function() {
-        if (apiKeyInput.type === 'password') {
-            apiKeyInput.type = 'text';
-            toggleApiKey.innerHTML = `
+	if (userInfo) {
+		await showMainScreen();
+	} else {
+		showLoginScreen();
+	}
+
+	emailUnreadCount.addEventListener("change", function () {
+		const isEnabled = this.checked;
+		chrome.storage.sync.set({ emailUnreadCount: isEnabled }, function () {
+			console.log("Email Unread Count setting saved:", isEnabled);
+			updateBadge(isEnabled);
+		});
+	});
+
+	function updateBadge(isEnabled) {
+		if (isEnabled) {
+			// For now, we're setting a static "3" as the badge text
+			chrome.action.setBadgeText({ text: "9+" });
+			chrome.action.setBadgeBackgroundColor({ color: "#73a6fa" });
+		} else {
+			chrome.action.setBadgeText({ text: "" });
+		}
+	}
+
+	// Load saved Email Unread Count setting
+	chrome.storage.sync.get(["emailUnreadCount"], function (result) {
+		if (result.emailUnreadCount !== undefined) {
+			emailUnreadCount.checked = result.emailUnreadCount;
+			updateBadge(result.emailUnreadCount);
+		}
+	});
+
+	aiProvider.addEventListener("change", function () {
+		chrome.storage.sync.set({ aiProvider: this.value }, function () {
+			console.log("AI Provider saved:", aiProvider.value);
+		});
+	});
+
+	// Load saved AI Provider
+	chrome.storage.sync.get(["aiProvider"], function (result) {
+		if (result.aiProvider) {
+			aiProvider.value = result.aiProvider;
+		}
+	});
+
+	function getUserInfo() {
+		chrome.identity.getAuthToken({ interactive: true }, function (token) {
+			if (chrome.runtime.lastError) {
+				console.error(chrome.runtime.lastError);
+				updateSettingsTitle(null);
+				return;
+			}
+
+			fetch("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
+				headers: { Authorization: `Bearer ${token}` },
+			})
+				.then((response) => response.json())
+				.then((data) => {
+					console.log("User data:", data); // Log the entire data object
+					if (data.name) {
+						updateSettingsTitle(data.name);
+					} else if (data.email) {
+						const userName = data.email.split("@")[0];
+						updateSettingsTitle(userName);
+					} else {
+						console.log("User information not available");
+						updateSettingsTitle(null);
+					}
+				})
+				.catch((error) => {
+					console.error("Error fetching user info:", error);
+					updateSettingsTitle(null);
+				});
+		});
+	}
+
+	function updateSettingsTitle(userName) {
+		const settingsTitle = document.getElementById("settingsTitle");
+		if (userName) {
+			settingsTitle.textContent = `Hello, ${userName}`;
+		} else {
+			settingsTitle.textContent = "Settings";
+		}
+	}
+
+	// Call this function when the popup opens
+	getUserInfo();
+
+	toggleApiKey.addEventListener("click", function () {
+		if (apiKeyInput.type === "password") {
+			apiKeyInput.type = "text";
+			toggleApiKey.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye-off">
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                     <line x1="1" y1="1" x2="23" y2="23"></line>
                 </svg>`;
-        } else {
-            apiKeyInput.type = 'password';
-            toggleApiKey.innerHTML = `
+		} else {
+			apiKeyInput.type = "password";
+			toggleApiKey.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                     <circle cx="12" cy="12" r="3"></circle>
                 </svg>`;
-        }
-    });
-    document.getElementById('settingsPanel').addEventListener('click', function(event) {
-        event.stopPropagation();
-    });
+		}
+	});
+	document
+		.getElementById("settingsPanel")
+		.addEventListener("click", function (event) {
+			event.stopPropagation();
+		});
 
-    function getEmailThreadIdFromUrl(url) {
-        const match = url.match(/#inbox\/([^/]+)/);
-        return match ? match[1] : Date.now().toString();
-    }
+	function getEmailThreadIdFromUrl(url) {
+		const match = url.match(/#inbox\/([^/]+)/);
+		return match ? match[1] : null;
+	}
 
-    async function conversationExists() {
-        const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-        const threadId = getEmailThreadIdFromUrl(tab.url);
-        const conversations = await Storage.getConversations();
-        return conversations.some(conv => conv.id === threadId);
-    }
+	async function conversationExists() {
+		const [tab] = await chrome.tabs.query({
+			active: true,
+			currentWindow: true,
+		});
+		const threadId = getEmailThreadIdFromUrl(tab.url);
+		const conversations = await Storage.getConversations();
+		return conversations.some((conv) => conv.id === threadId);
+	}
 
-    async function initializeChat() {
-        const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-        const isGmailDomain = tab.url.startsWith('https://mail.google.com');
-        const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url);
-    
-        if (isGmailDomain && hasOpenEmail) {
-            const hasConversation = await conversationExists();
-            if (hasConversation) {
-                const conversation = await Storage.getCurrentConversation();
-                displayConversation(conversation);
-                showChatInput();
-            } else {
-                showSummarizeButton();
-            }
-        } else {
-            showExistingConversations();
-        }
-        updateConversationList();
-    }
+	async function initializeChat() {
+		const [tab] = await chrome.tabs.query({
+			active: true,
+			currentWindow: true,
+		});
+		const isGmailDomain = tab.url.startsWith("https://mail.google.com");
+		const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url);
 
-    function showSummarizeButton() {
-        summarizeButton.style.display = 'block';
-        chatInputArea.style.display = 'none';
-    }
+		if (isGmailDomain && hasOpenEmail) {
+			const hasConversation = await conversationExists();
+			if (hasConversation) {
+				const conversation = await Storage.getCurrentConversation();
+				displayConversation(conversation);
+				showChatInput();
+			} else {
+				showSummarizeButton();
+			}
+		} else {
+			showExistingConversations();
+		}
+	}
 
-    function showChatInput() {
-        summarizeButton.style.display = 'none';
-        chatInputArea.style.display = 'flex';
-    }
+	function showSummarizeButton() {
+		summarizeButton.style.display = "block";
+		chatInputArea.style.display = "none";
+	}
 
-    function showLoginScreen() {
-        loginContainer.style.display = 'flex';
-        mainContainer.style.display = 'none';
-        settingsPanel.classList.remove('open');
-    }
+	function showChatInput() {
+		summarizeButton.style.display = "none";
+		chatInputArea.style.display = "flex";
+	}
 
-    function showMainScreen() {
-        loginContainer.style.display = 'none';
-        mainContainer.style.display = 'flex';
-        checkGmailDomain();
-    }
+	function showLoginScreen() {
+		loginContainer.style.display = "flex";
+		mainContainer.style.display = "none";
+		settingsPanel.classList.remove("open");
+	}
 
-    async function checkGmailDomain() {
-        const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-        const currentUrl = tab.url;
-        const isGmailDomain = currentUrl.startsWith('https://mail.google.com');
-        const hasOpenEmail = /#inbox\/[^/]+/.test(currentUrl);
-    
-        if (isGmailDomain && hasOpenEmail) {
-            handleGmailEmailThread(currentUrl);
-        } else {
-            handleNonGmailOrInbox();
-        }
-    }
-    
-    async function handleGmailEmailThread(url) {
-        const threadId = getEmailThreadIdFromUrl(url);
-        const conversation = await Storage.getConversationById(threadId);
-    
-        if (conversation) {
-            await Storage.setCurrentConversation(conversation);
-            displayConversation(conversation);
-            showChatInput();
-        } else {
-            showSummarizeButton();
-        }
-        updateConversationList();
-    }
-    
-    async function handleNonGmailOrInbox() {
-        const conversations = await Storage.getConversations();
-        
-        if (conversations.length > 0) {
-            const latestConversation = conversations[conversations.length - 1];
-            await Storage.setCurrentConversation(latestConversation);
-            displayConversation(latestConversation);
-            showChatInput();
-            gmailPopup.style.display = 'none';
-        } else {
-            chatWindow.innerHTML = '';
-            summarizeButton.style.display = 'none';
-            chatInputArea.style.display = 'none';
-            gmailPopup.textContent = "Navigate to Gmail and open an email to start a new conversation.";
-            gmailPopup.style.display = 'block';
-        }
-        updateConversationList();
-    }
+	async function showMainScreen() {
+		loginContainer.style.display = "none";
+		mainContainer.style.display = "flex";
+		settingsPanel.classList.remove("open");
+		await checkGmailDomain();
+		await initializeChat();
+	}
 
-    function showExistingConversations() {
-        Storage.getConversations().then(conversations => {
-            if (conversations.length > 0) {
-                chatWindow.innerHTML = '<div class="ai-message">Select a conversation from the sidebar to view its contents.</div>';
-                showChatInput();
-            } else {
-                chatWindow.innerHTML = '<div class="ai-message">No existing conversations. Start a new one in Gmail.</div>';
-            }
-        });
-    }
+	async function checkGmailDomain() {
+		const [tab] = await chrome.tabs.query({
+			active: true,
+			currentWindow: true,
+		});
+		const currentUrl = tab.url;
+		const isGmailDomain = currentUrl.startsWith("https://mail.google.com");
+		const hasOpenEmail = /#inbox\/[^/]+/.test(currentUrl);
 
-    async function updateConversationList() {
-        const conversationList = document.getElementById('conversationList');
-        conversationList.innerHTML = '';
-        
-        const conversations = await Storage.getConversations();
-        const currentConversation = await Storage.getCurrentConversation();
-        
-        conversations.forEach(conv => {
-            const item = document.createElement('div');
-            item.className = 'conversation-item';
-            if (currentConversation && conv.id === currentConversation.id) {
-                item.classList.add('active');
-            }
-            
-            const titleSpan = document.createElement('span');
-            titleSpan.className = 'conversation-title';
-            const idString = String(conv.id);
-            titleSpan.textContent = `Conversation -  ${idString.slice(-4)}`;
-            item.appendChild(titleSpan);
-    
-            const deleteButton = document.createElement('button');
-            deleteButton.className = 'delete-button';
-            deleteButton.innerHTML = '&#x2715;';
-            deleteButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                deleteConversation(conv.id);
-            });
-            item.appendChild(deleteButton);
-    
-            item.addEventListener('click', () => loadConversation(conv.id));
-            conversationList.appendChild(item);
-        });
-    }
-    
-    async function deleteConversation(id) {
-        if (confirm('Are you sure you want to delete this conversation?')) {
-            await Storage.deleteConversation(id);
-            updateConversationList();
-            const currentConv = await Storage.getCurrentConversation();
-            if (!currentConv || currentConv.id === id) {
-                chatWindow.innerHTML = '';
-                showSummarizeButton();
-            }
-        }
-    }
+		if (isGmailDomain && hasOpenEmail) {
+			handleGmailEmailThread(currentUrl);
+		} else {
+			handleNonGmailOrInbox();
+		}
+	}
 
-    async function loadConversation(conversationId) {
-        const conversation = await Storage.getConversationById(conversationId);
-        if (conversation) {
-            await Storage.setCurrentConversation(conversation);
-            displayConversation(conversation);
-            showChatInput();
-            updateConversationList();
-        }
-    }
+	async function handleGmailEmailThread(url) {
+		const threadId = getEmailThreadIdFromUrl(url);
+		const conversation = await Storage.getConversationById(threadId);
 
-    function displayConversation(conversation) {
-        chatWindow.innerHTML = '';
-    
-        conversation.messages.forEach(message => {
-            if (message.role !== 'system') {
-                const messageElement = document.createElement('div');
-                messageElement.className = `message ${message.role === 'assistant' ? 'ai-message' : 'user-message'}`;
-                messageElement.textContent = message.content;
-                chatWindow.appendChild(messageElement);
-            }
-        });
-    
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    }
+		if (conversation) {
+			await Storage.setCurrentConversation(conversation);
+			displayConversation(conversation);
+			showChatInput();
+		} else {
+			showSummarizeButton();
+		}
+		updateConversationList();
+	}
 
-    async function summarizeEmail() {
-        const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-        
-        if (tab.url.startsWith('https://mail.google.com') && /#inbox\/[^/]+/.test(tab.url)) {
-            const threadId = getEmailThreadIdFromUrl(tab.url);
-            let conversation = await Storage.getConversationById(threadId);
-    
-            if (!conversation) {
-                const summary = "This is a placeholder for the email summary.";
-                conversation = await Storage.createConversation(summary);
-                
-                const aiResponse = "This is a placeholder for the AI response to the summary.";
-                conversation.messages.push({role: 'assistant', content: aiResponse});
-                await Storage.updateConversation(conversation);
-            }
-    
-            await Storage.setCurrentConversation(conversation);
-            displayConversation(conversation);
-            showChatInput();
-            updateConversationList();
-        } else {
-            alert("Please open an email in Gmail to start a new conversation.");
-        }
-    }
+	async function handleNonGmailOrInbox() {
+		const conversations = await Storage.getConversations();
 
-    async function checkAuthStatus() {
-        try {
-            const token = await new Promise((resolve, reject) => {
-                chrome.identity.getAuthToken({ interactive: false }, function(token) {
-                    if (chrome.runtime.lastError) {
-                        reject(chrome.runtime.lastError);
-                    } else {
-                        resolve(token);
-                    }
-                });
-            });
-            
-            if (token) {
-                const userInfo = await fetchUserInfo(token);
-                showMainScreen();
-                return userInfo;
-            } else {
-                showLoginScreen();
-                return null;
-            }
-        } catch (error) {
-            console.error('Error checking auth status:', error);
-            showLoginScreen();
-            return null;
-        }
-    }
+		if (conversations.length > 0) {
+			const latestConversation = conversations[conversations.length - 1];
+			await Storage.setCurrentConversation(latestConversation);
+			displayConversation(latestConversation);
+			showChatInput();
+			gmailPopup.style.display = "none";
+		} else {
+			chatWindow.innerHTML = "";
+			summarizeButton.style.display = "none";
+			chatInputArea.style.display = "none";
+			gmailPopup.textContent =
+				"Navigate to Gmail and open an email to start a new conversation.";
+			gmailPopup.style.display = "block";
+		}
+		updateConversationList();
+	}
 
-    async function login() {
-        try {
-            const token = await new Promise((resolve, reject) => {
-                chrome.identity.getAuthToken({ interactive: true }, function(token) {
-                    if (chrome.runtime.lastError) {
-                        reject(chrome.runtime.lastError);
-                    } else {
-                        resolve(token);
-                    }
-                });
-            });
-            
-            const userInfo = await fetchUserInfo(token);
-            showMainScreen();
-            return userInfo;
-        } catch (error) {
-            console.error('Error during login:', error);
-            return null;
-        }
-    }
+	function showExistingConversations() {
+		Storage.getConversations().then((conversations) => {
+			if (conversations.length > 0) {
+				chatWindow.innerHTML =
+					'<div class="ai-message">Select a conversation from the sidebar to view its contents.</div>';
+				showChatInput();
+			}
+		});
+	}
 
-    async function fetchUserInfo(token) {
-        const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!response.ok) {
-            throw new Error('Failed to fetch user info');
-        }
-        return response.json();
-    }
+	async function updateConversationList() {
+		const conversationList = document.getElementById("conversationList");
+		conversationList.innerHTML = "";
 
-    async function logout() {
-        try {
-            await new Promise((resolve, reject) => {
-                chrome.identity.clearAllCachedAuthTokens(function() {
-                    if (chrome.runtime.lastError) {
-                        reject(chrome.runtime.lastError);
-                    } else {
-                        resolve();
-                    }
-                });
-            });
-            showLoginScreen();
-        } catch (error) {
-            console.error('Error during logout:', error);
-        }
-    }
+		const conversations = await Storage.getConversations();
+		const currentConversation = await Storage.getCurrentConversation();
 
-    async function sendMessage() {
-        const userMessage = userInput.value.trim();
-        if (userMessage) {
-            const conversation = await Storage.getCurrentConversation();
-            if (!conversation) {
-                alert("No active conversation. Please start a new conversation in Gmail.");
-                return;
-            }
-    
-            conversation.messages.push({role: 'user', content: userMessage});
-            await Storage.updateConversation(conversation);
-            displayConversation(conversation);
-            userInput.value = '';
-            
-            const aiResponse = "This is a placeholder for the AI response.";
-            conversation.messages.push({role: 'assistant', content: aiResponse});
-            await Storage.updateConversation(conversation);
-            displayConversation(conversation);
-            updateConversationList();
-        }
-    }
+		conversations.forEach((conv) => {
+			const item = document.createElement("div");
+			item.className = "conversation-item";
+			if (currentConversation && conv.id === currentConversation.id) {
+				item.classList.add("active");
+			}
 
-    loginButton.addEventListener('click', login);
-    logoutButton.addEventListener('click', logout);
-    summarizeButton.addEventListener('click', summarizeEmail);
-    sendButton.addEventListener('click', sendMessage);
+			const titleSpan = document.createElement("span");
+			titleSpan.className = "conversation-title";
+			const idString = String(conv.id);
+			titleSpan.textContent = `Conversation -  ${idString.slice(-4)}`;
+			item.appendChild(titleSpan);
 
-    userInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
+			const deleteButton = document.createElement("button");
+			deleteButton.className = "delete-button";
+			deleteButton.innerHTML = "&#x2715;";
+			deleteButton.addEventListener("click", (e) => {
+				e.stopPropagation();
+				deleteConversation(conv.id);
+			});
+			item.appendChild(deleteButton);
 
-    settingsButton.addEventListener('click', function() {
-        settingsPanel.classList.toggle('open');
-    });
+			item.addEventListener("click", () => loadConversation(conv.id));
+			conversationList.appendChild(item);
+		});
+	}
 
-    document.addEventListener('click', function(event) {
-        if (!settingsPanel.contains(event.target) && !settingsButton.contains(event.target)) {
-            settingsPanel.classList.remove('open');
-        }
-    });
+	async function deleteConversation(id) {
+		if (confirm("Are you sure you want to delete this conversation?")) {
+			await Storage.deleteConversation(id);
+			updateConversationList();
+			const currentConv = await Storage.getCurrentConversation();
+			if (!currentConv || currentConv.id === id) {
+				chatWindow.innerHTML = "";
+				showSummarizeButton();
+			}
+		}
+	}
 
-    chrome.storage.sync.get(['apiKey'], function(result) {
-        if (result.apiKey) {
-            apiKeyInput.value = result.apiKey;
-        }
-    });
+	async function loadConversation(conversationId) {
+		const conversation = await Storage.getConversationById(conversationId);
+		if (conversation) {
+			await Storage.setCurrentConversation(conversation);
+			displayConversation(conversation);
+			showChatInput();
+			updateConversationList();
+		}
+	}
 
-    apiKeyInput.addEventListener('change', function() {
-        chrome.storage.sync.set({apiKey: apiKeyInput.value}, function() {
-            console.log('API key saved');
-        });
-    });
+	function displayConversation(conversation) {
+		chatWindow.innerHTML = "";
 
-    checkGmailDomain();
-    checkAuthStatus();
-});
+		conversation.messages.forEach((message) => {
+			if (message.role !== "system") {
+				const messageElement = document.createElement("div");
+				messageElement.className = `message ${
+					message.role === "assistant" ? "ai-message" : "user-message"
+				}`;
+				messageElement.textContent = message.content;
+				chatWindow.appendChild(messageElement);
+			}
+		});
+
+		chatWindow.scrollTop = chatWindow.scrollHeight;
+	}
+
+	async function summarizeEmail() {
+		const [tab] = await chrome.tabs.query({
+			active: true,
+			currentWindow: true,
+		});
+
+		if (
+			tab.url.startsWith("https://mail.google.com") &&
+			/#inbox\/[^/]+/.test(tab.url)
+		) {
+			const threadId = getEmailThreadIdFromUrl(tab.url);
+			let conversation = await Storage.getConversationById(threadId);
+
+			if (!conversation) {
+				try {
+					const emailContent = await getEmailContent(threadId);
+					conversation = await Storage.createConversation(emailContent);
+
+					const aiResponse =
+						"This is where we would process the email content with AI.";
+					conversation.messages.push({
+						role: "assistant",
+						content: aiResponse,
+					});
+					await Storage.updateConversation(conversation);
+				} catch (error) {
+					console.error("Error fetching email content:", error);
+					alert("Error fetching email content. Please try again.");
+					return;
+				}
+			}
+
+			await Storage.setCurrentConversation(conversation);
+			displayConversation(conversation);
+			showChatInput();
+			updateConversationList();
+		} else {
+			alert("Please open an email in Gmail to start a new conversation.");
+		}
+	}
+
+	async function getEmailContent(threadId) {
+		return new Promise((resolve, reject) => {
+			chrome.identity.getAuthToken({ interactive: true }, function (token) {
+				if (chrome.runtime.lastError) {
+					reject(chrome.runtime.lastError);
+					return;
+				}
+
+				//https://gmail.googleapis.com/gmail/v1/users/{userId}/threads/{id}
+				fetch(
+					`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}`,
+					{
+						headers: { Authorization: `Bearer ${token}` },
+					}
+				)
+					.then((response) => response.json())
+					.then((data) => {
+						let emailContent = "";
+						data.messages.forEach((message) => {
+							if (message.payload.parts) {
+								message.payload.parts.forEach((part) => {
+									if (part.mimeType === "text/plain") {
+										emailContent +=
+											atob(
+												part.body.data.replace(/-/g, "+").replace(/_/g, "/")
+											) + "\n\n";
+									}
+								});
+							} else if (message.payload.body.data) {
+								emailContent +=
+									atob(
+										message.payload.body.data
+											.replace(/-/g, "+")
+											.replace(/_/g, "/")
+									) + "\n\n";
+							}
+						});
+						resolve(emailContent);
+					})
+					.catch((error) => reject(error));
+			});
+		});
+	}
+
+	async function checkAuthStatus() {
+		try {
+			const token = await new Promise((resolve, reject) => {
+				chrome.identity.getAuthToken({ interactive: false }, function (token) {
+					if (chrome.runtime.lastError) {
+						reject(chrome.runtime.lastError);
+					} else {
+						resolve(token);
+					}
+				});
+			});
+
+			if (token) {
+				const userInfo = await fetchUserInfo(token);
+				return userInfo;
+			} else {
+				return null;
+			}
+		} catch (error) {
+			console.error("Error checking auth status:", error);
+			return null;
+		}
+	}
+
+	async function login() {
+		try {
+			const token = await new Promise((resolve, reject) => {
+				chrome.identity.getAuthToken({ interactive: true }, function (token) {
+					if (chrome.runtime.lastError) {
+						reject(chrome.runtime.lastError);
+					} else {
+						resolve(token);
+					}
+				});
+			});
+
+			const userInfo = await fetchUserInfo(token);
+			showMainScreen();
+			return userInfo;
+		} catch (error) {
+			console.error("Error during login:", error);
+			return null;
+		}
+	}
+
+	async function fetchUserInfo(token) {
+		const response = await fetch(
+			"https://www.googleapis.com/oauth2/v1/userinfo?alt=json",
+			{
+				headers: { Authorization: `Bearer ${token}` },
+			}
+		);
+		if (!response.ok) {
+			throw new Error("Failed to fetch user info");
+		}
+		return response.json();
+	}
+
+	async function logout() {
+		try {
+			await new Promise((resolve, reject) => {
+				chrome.identity.clearAllCachedAuthTokens(function () {
+					if (chrome.runtime.lastError) {
+						reject(chrome.runtime.lastError);
+					} else {
+						resolve();
+					}
+				});
+			});
+			showLoginScreen();
+		} catch (error) {
+			console.error("Error during logout:", error);
+		}
+	}
+
+	async function sendMessage() {
+		const userMessage = userInput.value.trim();
+		if (userMessage) {
+			const conversation = await Storage.getCurrentConversation();
+			if (!conversation) {
+				alert(
+					"No active conversation. Please start a new conversation in Gmail."
+				);
+				return;
+			}
+
+			conversation.messages.push({ role: "user", content: userMessage });
+			await Storage.updateConversation(conversation);
+			displayConversation(conversation);
+			userInput.value = "";
+
+			const aiResponse = "This is a placeholder for the AI response.";
+			conversation.messages.push({ role: "assistant", content: aiResponse });
+			await Storage.updateConversation(conversation);
+			displayConversation(conversation);
+			updateConversationList();
+		}
+	}
+
+	loginButton.addEventListener("click", login);
+	logoutButton.addEventListener("click", logout);
+	summarizeButton.addEventListener("click", summarizeEmail);
+	sendButton.addEventListener("click", sendMessage);
+
+	userInput.addEventListener("keydown", function (e) {
+		if (e.key === "Enter" && !e.shiftKey) {
+			e.preventDefault();
+			sendMessage();
+		}
+	});
+
+	settingsButton.addEventListener("click", function () {
+		settingsPanel.classList.toggle("open");
+	});
+
+	document.addEventListener("click", function (event) {
+		if (
+			!settingsPanel.contains(event.target) &&
+			!settingsButton.contains(event.target)
+		) {
+			settingsPanel.classList.remove("open");
+		}
+	});
+
+	chrome.storage.sync.get(["apiKey"], function (result) {
+		if (result.apiKey) {
+			apiKeyInput.value = result.apiKey;
+		}
+	});
+
+	apiKeyInput.addEventListener("change", function () {
+		chrome.storage.sync.set({ apiKey: apiKeyInput.value }, function () {
+			console.log("API key saved");
+		});
+	});
+}
