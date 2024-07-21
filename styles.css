@@ -41,6 +41,24 @@ body, html {
     overflow-y: auto;
     padding: 10px;
 }
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.delete-all-button {
+  width: 20px; /* Adjust this value based on your image size */
+  height: 20px; /* Adjust this value based on your image size */
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.delete-all-button:hover {
+  opacity: 0.5;
+}
 
 #sidebar h2 {
     color: #ffffff;

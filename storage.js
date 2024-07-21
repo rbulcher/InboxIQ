@@ -14,6 +14,10 @@ export const Storage = {
     saveConversations: async (conversations) => {
         return chrome.storage.local.set({ conversations });
     },
+    clearConversations: async () => {
+        await chrome.storage.local.set({ conversations: [] });
+        await Storage.setCurrentConversation(null);
+      },
 
     // Create a new conversation
     createConversation: async (summary) => {

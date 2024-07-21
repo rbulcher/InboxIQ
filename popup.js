@@ -1,5 +1,5 @@
 import { Storage } from "./storage.js";
-import { getEmailThreadIdFromPage, getEmails } from './utils/emailUtil.js';
+import { getEmailThreadIdFromPage, getEmails } from "./utils/emailUtil.js";
 
 document.addEventListener("DOMContentLoaded", function () {
 	initializePopup();
@@ -23,6 +23,8 @@ async function initializePopup() {
 	const toggleApiKey = document.getElementById("toggleApiKey");
 	const aiProvider = document.getElementById("aiProvider");
 	const emailUnreadCount = document.getElementById("emailUnreadCount");
+	const deleteAllButton = document.getElementById("deleteAllButton");
+	deleteAllButton.addEventListener("click", deleteAllConversations);
 
 	// Hide both containers initially
 	loginContainer.style.display = "none";
@@ -44,6 +46,15 @@ async function initializePopup() {
 			updateBadge(isEnabled);
 		});
 	});
+
+	async function deleteAllConversations() {
+		if (confirm("Are you sure you want to delete all conversations?")) {
+			await Storage.clearConversations();
+			updateConversationList();
+			chatWindow.innerHTML = "";
+			showSummarizeButton();
+		}
+	}
 
 	function updateBadge(isEnabled) {
 		if (isEnabled) {
@@ -358,18 +369,18 @@ async function initializePopup() {
 			active: true,
 			currentWindow: true,
 		});
-	
+
 		if (tab.url.startsWith("https://mail.google.com")) {
 			try {
 				const response = await getEmailThreadIdFromPage();
 				if (response && response.threadId) {
 					const threadId = response.threadId;
 					let conversation = await Storage.getConversationById(threadId);
-	
+
 					if (!conversation) {
 						const emailContent = await getEmails(threadId);
 						conversation = await Storage.createConversation(emailContent);
-	
+
 						// Use email content as AI response for debugging
 						conversation.messages.push({
 							role: "assistant",
@@ -377,7 +388,7 @@ async function initializePopup() {
 						});
 						await Storage.updateConversation(conversation);
 					}
-	
+
 					await Storage.setCurrentConversation(conversation);
 					displayConversation(conversation);
 					showChatInput();
