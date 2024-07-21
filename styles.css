@@ -53,6 +53,7 @@ body, html {
     display: flex;
     flex-direction: column;
     height: 100%;
+    max-width: 600px;
 }
 
   #chatInputArea {
@@ -78,6 +79,7 @@ body, html {
     margin-bottom: 10px;
     border-radius: 15px;
     font-size: 14px;
+    word-wrap: break-word;
     line-height: 1.4;
   }
   
@@ -444,3 +446,40 @@ body, html {
   .logout-button:hover {
     background-color: #dc2626;
   }
+
+  .ai-message a {
+    color: #7fdbff; /* A light blue that contrasts well with dark backgrounds */
+    text-decoration: none;
+}
+
+.ai-message a:hover {
+  text-decoration: underline;
+}
+
+/* Style for code blocks */
+.ai-message pre {
+  background-color: #2d2d2d;
+  border: 1px solid #3e3e3e;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.ai-message code {
+  color: #f8f8f2;
+  background-color: #2d2d2d;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* Style for blockquotes */
+.ai-message blockquote {
+  border-left: 3px solid #7fdbff;
+  margin: 0;
+  padding-left: 10px;
+  color: #b0b0b0;
+}
+
+/* Style for headings */
+.ai-message h1, .ai-message h2, .ai-message h3, .ai-message h4, .ai-message h5, .ai-message h6 {
+  color: #ffffff;
+}

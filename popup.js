@@ -46,7 +46,7 @@ async function initializePopup() {
 
 	function updateBadge(isEnabled) {
 		if (isEnabled) {
-			// For now, we're setting a static "3" as the badge text
+			// For now, we're setting a static "9+" as the badge text
 			chrome.action.setBadgeText({ text: "9+" });
 			chrome.action.setBadgeBackgroundColor({ color: "#73a6fa" });
 		} else {
@@ -88,7 +88,6 @@ async function initializePopup() {
 			})
 				.then((response) => response.json())
 				.then((data) => {
-					console.log("User data:", data); // Log the entire data object
 					if (data.name) {
 						updateSettingsTitle(data.name);
 					} else if (data.email) {
@@ -135,25 +134,48 @@ async function initializePopup() {
                 </svg>`;
 		}
 	});
+
 	document
 		.getElementById("settingsPanel")
 		.addEventListener("click", function (event) {
 			event.stopPropagation();
 		});
 
-	function getEmailThreadIdFromUrl(url) {
-		const match = url.match(/#inbox\/([^/]+)/);
-		return match ? match[1] : null;
+	async function getEmailThreadIdFromPage() {
+		try {
+			const tabs = await chrome.tabs.query({
+				active: true,
+				currentWindow: true,
+			});
+			if (tabs.length === 0) {
+				throw new Error("No active tab found");
+			}
+			const tab = tabs[0];
+			console.log("Sending message to tab:", tab.id);
+			const response = await chrome.tabs.sendMessage(tab.id, {
+				greeting: "hello",
+			});
+			console.log("Received response:", response);
+			return response;
+		} catch (error) {
+			console.error("Error in getEmailThreadIdFromPage:", error);
+			throw error;
+		}
 	}
 
 	async function conversationExists() {
-		const [tab] = await chrome.tabs.query({
-			active: true,
-			currentWindow: true,
-		});
-		const threadId = getEmailThreadIdFromUrl(tab.url);
-		const conversations = await Storage.getConversations();
-		return conversations.some((conv) => conv.id === threadId);
+		try {
+			const response = await getEmailThreadIdFromPage();
+			if (response && response.threadId) {
+				const threadId = response.threadId;
+				const conversations = await Storage.getConversations();
+				return conversations.some((conv) => conv.id === threadId);
+			}
+			return false;
+		} catch (error) {
+			console.error("Error checking if conversation exists:", error);
+			return false;
+		}
 	}
 
 	async function initializeChat() {
@@ -212,24 +234,35 @@ async function initializePopup() {
 		const hasOpenEmail = /#inbox\/[^/]+/.test(currentUrl);
 
 		if (isGmailDomain && hasOpenEmail) {
-			handleGmailEmailThread(currentUrl);
+			handleGmailEmailThread();
 		} else {
 			handleNonGmailOrInbox();
 		}
 	}
 
-	async function handleGmailEmailThread(url) {
-		const threadId = getEmailThreadIdFromUrl(url);
-		const conversation = await Storage.getConversationById(threadId);
+	async function handleGmailEmailThread() {
+		try {
+			const response = await getEmailThreadIdFromPage();
+			if (response && response.threadId) {
+				const threadId = response.threadId;
+				const conversation = await Storage.getConversationById(threadId);
 
-		if (conversation) {
-			await Storage.setCurrentConversation(conversation);
-			displayConversation(conversation);
-			showChatInput();
-		} else {
+				if (conversation) {
+					await Storage.setCurrentConversation(conversation);
+					displayConversation(conversation);
+					showChatInput();
+				} else {
+					showSummarizeButton();
+				}
+				updateConversationList();
+			} else {
+				console.error("No thread ID received");
+				showSummarizeButton();
+			}
+		} catch (error) {
+			console.error("Error handling Gmail email thread:", error);
 			showSummarizeButton();
 		}
-		updateConversationList();
 	}
 
 	async function handleNonGmailOrInbox() {
@@ -327,7 +360,13 @@ async function initializePopup() {
 				messageElement.className = `message ${
 					message.role === "assistant" ? "ai-message" : "user-message"
 				}`;
-				messageElement.textContent = message.content;
+
+				if (message.role === "assistant") {
+					messageElement.innerHTML = formatAIResponse(message.content);
+				} else {
+					messageElement.textContent = message.content;
+				}
+
 				chatWindow.appendChild(messageElement);
 			}
 		});
@@ -341,36 +380,36 @@ async function initializePopup() {
 			currentWindow: true,
 		});
 
-		if (
-			tab.url.startsWith("https://mail.google.com") &&
-			/#inbox\/[^/]+/.test(tab.url)
-		) {
-			const threadId = getEmailThreadIdFromUrl(tab.url);
-			let conversation = await Storage.getConversationById(threadId);
+		if (tab.url.startsWith("https://mail.google.com")) {
+			try {
+				const response = await getEmailThreadIdFromPage();
+				if (response && response.threadId) {
+					const threadId = response.threadId;
+					let conversation = await Storage.getConversationById(threadId);
 
-			if (!conversation) {
-				try {
-					const emailContent = await getEmailContent(threadId);
-					conversation = await Storage.createConversation(emailContent);
+					if (!conversation) {
+						const emailContent = await getEmailContent(threadId);
+						conversation = await Storage.createConversation(emailContent);
 
-					const aiResponse =
-						"This is where we would process the email content with AI.";
-					conversation.messages.push({
-						role: "assistant",
-						content: aiResponse,
-					});
-					await Storage.updateConversation(conversation);
-				} catch (error) {
-					console.error("Error fetching email content:", error);
-					alert("Error fetching email content. Please try again.");
-					return;
+						// Use email content as AI response for debugging
+						conversation.messages.push({
+							role: "assistant",
+							content: formatAIResponse(emailContent),
+						});
+						await Storage.updateConversation(conversation);
+					}
+
+					await Storage.setCurrentConversation(conversation);
+					displayConversation(conversation);
+					showChatInput();
+					updateConversationList();
+				} else {
+					throw new Error("No thread ID received");
 				}
+			} catch (error) {
+				console.error("Error processing email:", error);
+				alert("Error processing email. Please try again.");
 			}
-
-			await Storage.setCurrentConversation(conversation);
-			displayConversation(conversation);
-			showChatInput();
-			updateConversationList();
 		} else {
 			alert("Please open an email in Gmail to start a new conversation.");
 		}
@@ -378,21 +417,35 @@ async function initializePopup() {
 
 	async function getEmailContent(threadId) {
 		return new Promise((resolve, reject) => {
-			chrome.identity.getAuthToken({ interactive: true }, function (token) {
-				if (chrome.runtime.lastError) {
-					reject(chrome.runtime.lastError);
-					return;
-				}
-
-				//https://gmail.googleapis.com/gmail/v1/users/{userId}/threads/{id}
-				fetch(
-					`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}`,
-					{
-						headers: { Authorization: `Bearer ${token}` },
+			chrome.identity.getAuthToken(
+				{ interactive: true },
+				async function (token) {
+					if (chrome.runtime.lastError) {
+						reject(chrome.runtime.lastError);
+						return;
 					}
-				)
-					.then((response) => response.json())
-					.then((data) => {
+
+					try {
+						const response = await fetch(
+							`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}`,
+							{
+								headers: {
+									Authorization: `Bearer ${token}`,
+									Accept: "application/json",
+								},
+							}
+						);
+
+						if (!response.ok) {
+							throw new Error(`HTTP error! status: ${response.status}`);
+						}
+
+						const data = await response.json();
+
+						if (!data.messages || data.messages.length === 0) {
+							throw new Error("No messages found in the thread");
+						}
+
 						let emailContent = "";
 						data.messages.forEach((message) => {
 							if (message.payload.parts) {
@@ -413,11 +466,34 @@ async function initializePopup() {
 									) + "\n\n";
 							}
 						});
+
+						if (emailContent === "") {
+							throw new Error("No email content found");
+						}
+
 						resolve(emailContent);
-					})
-					.catch((error) => reject(error));
-			});
+					} catch (error) {
+						reject(error);
+					}
+				}
+			);
 		});
+	}
+
+	function formatAIResponse(response) {
+		// Convert markdown to HTML
+		let formattedResponse = marked.parse(response);
+
+		// Wrap the response in a div to apply highlighting
+		let tempDiv = document.createElement("div");
+		tempDiv.innerHTML = formattedResponse;
+
+		// Apply syntax highlighting
+		tempDiv.querySelectorAll("pre code").forEach((block) => {
+			hljs.highlightBlock(block);
+		});
+
+		return tempDiv.innerHTML;
 	}
 
 	async function checkAuthStatus() {

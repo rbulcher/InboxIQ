@@ -3,6 +3,8 @@
 	<head>
 		<title>Email AI Assistant</title>
 		<script src="popup.js" type="module"></script>
+		<script src="lib/highlight.min.js"></script>
+		<script src="lib/marked.min.js"></script>
 		<link rel="stylesheet" href="styles.css" />
 	</head>
 	<body>
@@ -27,12 +29,25 @@
 					<!-- Chat messages will be inserted here -->
 				</div>
 				<div id="inputArea" class="input-area">
-					<button id="summarizeButton" class="centered-button">Summarize Email</button>
-					<div id="chatInputArea" style="display: none;">
-						<textarea id="userInput" placeholder="Ask a question about the email..."></textarea>
+					<button id="summarizeButton" class="centered-button">
+						Summarize Email
+					</button>
+					<div id="chatInputArea" style="display: none">
+						<textarea
+							id="userInput"
+							placeholder="Ask a question about the email..."
+						></textarea>
 						<button id="sendButton">
-							<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 16 16" fill="none" class="icon-sm m-1 md:m-0">
-								<path d="M.5 1.163A1 1 0 0 1 1.97.28l12.868 6.837a1 1 0 0 1 0 1.766L1.969 15.72A1 1 0 0 1 .5 14.836V10.33a1 1 0 0 1 .816-.983L8.5 8 1.316 6.653A1 1 0 0 1 .5 5.67V1.163Z" fill="currentColor"></path>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewbox="0 0 16 16"
+								fill="none"
+								class="icon-sm m-1 md:m-0"
+							>
+								<path
+									d="M.5 1.163A1 1 0 0 1 1.97.28l12.868 6.837a1 1 0 0 1 0 1.766L1.969 15.72A1 1 0 0 1 .5 14.836V10.33a1 1 0 0 1 .816-.983L8.5 8 1.316 6.653A1 1 0 0 1 .5 5.67V1.163Z"
+									fill="currentColor"
+								></path>
 							</svg>
 						</button>
 					</div>
@@ -59,54 +74,63 @@
 			</button>
 		</div>
 		<div id="settingsPanel" class="settings-panel">
-            <h2 id="settingsTitle">Settings</h2>
-            <div class="setting-item">
-                <label for="aiProvider">AI Provider:</label>
-                <select id="aiProvider">
-                    <option value="openai">OpenAI</option>
-                    <option value="claude">Claude</option>
-                    <option value="openwebui">OpenWebUI</option>
-                    <option value="ollama">Ollama</option>
-                </select>
-            </div>
-            <div class="setting-item">
-                <label for="apiKey">API Key:</label>
-                <div class="api-key-container">
-                    <input type="password" id="apiKey" placeholder="Enter your API key" />
-                    <button id="toggleApiKey" class="toggle-api-key">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            <div class="setting-item">
-                <label for="emailRefreshRate">Email Refresh Rate:</label>
-                <select id="emailRefreshRate">
-                    <option value="30">30 seconds</option>
-                    <option value="60">1 minute</option>
-                    <option value="300">5 minutes</option>
-                </select>
-            </div>
-            <div class="setting-item">
-                <label for="emailUnreadCount">Email Unread Count:</label>
-                <div class="toggle-container">
-                    <input type="checkbox" id="emailUnreadCount" class="toggle-input" />
-                    <label for="emailUnreadCount" class="toggle-label"></label>
-                </div>
-            </div>
-            <div class="setting-item">
-                <label for="conversationLifetime">Conversation Lifetime:</label>
-                <select id="conversationLifetime">
-                    <option value="12">12 hours</option>
-                    <option value="24">24 hours</option>
-                    <option value="48">48 hours</option>
-                </select>
-            </div>
-            <div class="logout-container">
-                <button id="logoutButton" class="logout-button">Logout</button>
-            </div>
-        </div>
+			<h2 id="settingsTitle">Settings</h2>
+			<div class="setting-item">
+				<label for="aiProvider">AI Provider:</label>
+				<select id="aiProvider">
+					<option value="openai">OpenAI</option>
+					<option value="claude">Claude</option>
+					<option value="openwebui">OpenWebUI</option>
+					<option value="ollama">Ollama</option>
+				</select>
+			</div>
+			<div class="setting-item">
+				<label for="apiKey">API Key:</label>
+				<div class="api-key-container">
+					<input type="password" id="apiKey" placeholder="Enter your API key" />
+					<button id="toggleApiKey" class="toggle-api-key">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="feather feather-eye"
+						>
+							<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+							<circle cx="12" cy="12" r="3"></circle>
+						</svg>
+					</button>
+				</div>
+			</div>
+			<div class="setting-item">
+				<label for="emailRefreshRate">Email Refresh Rate:</label>
+				<select id="emailRefreshRate">
+					<option value="30">30 seconds</option>
+					<option value="60">1 minute</option>
+					<option value="300">5 minutes</option>
+				</select>
+			</div>
+			<div class="setting-item">
+				<label for="emailUnreadCount">Email Unread Count:</label>
+				<div class="toggle-container">
+					<input type="checkbox" id="emailUnreadCount" class="toggle-input" />
+					<label for="emailUnreadCount" class="toggle-label"></label>
+				</div>
+			</div>
+			<div class="setting-item">
+				<label for="conversationLifetime">Conversation Lifetime:</label>
+				<select id="conversationLifetime">
+					<option value="12">12 hours</option>
+					<option value="24">24 hours</option>
+					<option value="48">48 hours</option>
+				</select>
+			</div>
+			<div class="logout-container">
+				<button id="logoutButton" class="logout-button">Logout</button>
+			</div>
+		</div>
 	</body>
 </html>
