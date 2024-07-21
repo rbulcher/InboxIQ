@@ -17,118 +17,183 @@ export async function getEmailThreadIdFromPage() {
 }
 
 export async function getEmails(threadId) {
-    function decodeBase64(base64Url) {
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const padding = '='.repeat((4 - base64.length % 4) % 4);
-        const base64Padded = base64 + padding;
-        const rawData = atob(base64Padded);
-        return decodeURIComponent(escape(rawData));
-    }
+	function decodeBase64(base64Url) {
+		const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+		const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+		const base64Padded = base64 + padding;
+		const rawData = atob(base64Padded);
+		return decodeURIComponent(escape(rawData));
+	}
 
-    function extractTextFromHTML(html) {
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        
-        // Remove script and style elements
-        const scripts = doc.getElementsByTagName('script');
-        const styles = doc.getElementsByTagName('style');
-        for (let i = scripts.length - 1; i >= 0; i--) {
-            scripts[i].parentNode.removeChild(scripts[i]);
-        }
-        for (let i = styles.length - 1; i >= 0; i--) {
-            styles[i].parentNode.removeChild(styles[i]);
-        }
-    
-        // Get the text content
-        const text = doc.body.textContent || doc.body.innerText || "";
-        
-        // Normalize whitespace
-        return text.replace(/\s+/g, ' ').trim();
-    }
+	function extractTextFromHTML(html) {
+		const doc = new DOMParser().parseFromString(html, "text/html");
 
-    function cleanContent(content) {
-        let cleaned = content.replace(/\s+/g, ' ').trim();
-        cleaned = cleaned.replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, '');
-        
-        const endMarkers = ['best,', 'sincerely,', 'regards,', 'thanks,', 'thank you,', 'cheers,', 'wrote:', 'join by phone', 'privacy statement', 'privacy and cookie policy'];
-        for (let marker of endMarkers) {
-            const index = cleaned.toLowerCase().indexOf(marker);
-            if (index > 0) {
-                cleaned = cleaned.substring(0, index);
-            }
-        }
+		// Remove script and style elements
+		const scripts = doc.getElementsByTagName("script");
+		const styles = doc.getElementsByTagName("style");
+		for (let i = scripts.length - 1; i >= 0; i--) {
+			scripts[i].parentNode.removeChild(scripts[i]);
+		}
+		for (let i = styles.length - 1; i >= 0; i--) {
+			styles[i].parentNode.removeChild(styles[i]);
+		}
 
-        cleaned = cleaned.replace(/https?:\/\/[^\s]+/g, '');
-        return cleaned.trim();
-    }
+		// Get the text content
+		const text = doc.body.textContent || doc.body.innerText || "";
 
-    return new Promise((resolve, reject) => {
-        chrome.identity.getAuthToken({ interactive: true }, async function (token) {
-            if (chrome.runtime.lastError) {
-                reject(chrome.runtime.lastError);
-                return;
-            }
+		// Normalize whitespace
+		return text.replace(/\s+/g, " ").trim();
+	}
 
-            try {
-                const response = await fetch(
-                    `https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            Accept: "application/json",
-                        },
-                    }
-                );
+	function cleanContent(content) {
+		let cleaned = content.replace(/\s+/g, " ").trim();
+		cleaned = cleaned.replace(
+			/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
+			""
+		);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+		const endMarkers = [
+			"best,",
+			"sincerely,",
+			"regards,",
+			"thanks,",
+			"thank you,",
+			"cheers,",
+			"wrote:",
+			"join by phone",
+			"privacy statement",
+			"privacy and cookie policy",
+		];
+		for (let marker of endMarkers) {
+			const index = cleaned.toLowerCase().indexOf(marker);
+			if (index > 0) {
+				cleaned = cleaned.substring(0, index);
+			}
+		}
 
-                const data = await response.json();
+		cleaned = cleaned.replace(/https?:\/\/[^\s]+/g, "");
+		return cleaned.trim();
+	}
 
-                if (!data.messages || data.messages.length === 0) {
-                    throw new Error("No messages found in the thread");
-                }
+	return new Promise((resolve, reject) => {
+		chrome.identity.getAuthToken({ interactive: true }, async function (token) {
+			if (chrome.runtime.lastError) {
+				reject(chrome.runtime.lastError);
+				return;
+			}
 
-                let threadContent = "";
-                data.messages.forEach((msg) => {
-                    let headers = {};
-                    msg.payload.headers.forEach(header => {
-                        headers[header.name.toLowerCase()] = header.value;
-                    });
-                
-                    let body = "";
-                    if (msg.payload.mimeType === 'multipart/alternative' && msg.payload.parts) {
-                        const textPart = msg.payload.parts.find(part => part.mimeType === 'text/plain');
-                        const htmlPart = msg.payload.parts.find(part => part.mimeType === 'text/html');
-                        if (textPart && textPart.body.data) {
-                            body = decodeBase64(textPart.body.data);
-                        } else if (htmlPart && htmlPart.body.data) {
-                            const htmlContent = decodeBase64(htmlPart.body.data);
-                            body = extractTextFromHTML(htmlContent);
-                        }
-                    } else if (msg.payload.body && msg.payload.body.data) {
-                        body = decodeBase64(msg.payload.body.data);
-                        if (msg.payload.mimeType === 'text/html') {
-                            body = extractTextFromHTML(body);
-                        }
-                    }
-                
-                    body = cleanContent(body);
-                
-                    threadContent += `From: ${headers.from || 'Unknown'}\n`;
-                    threadContent += `To: ${headers.to || 'Unknown'}\n`;
-                    threadContent += `Subject: ${headers.subject || 'No Subject'}\n`;
-                    threadContent += `Body: ${body}\n\n`;
-                });
+			try {
+				const response = await fetch(
+					`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}`,
+					{
+						headers: {
+							Authorization: `Bearer ${token}`,
+							Accept: "application/json",
+						},
+					}
+				);
 
-                if (threadContent.trim() === "") {
-                    throw new Error("No email content found");
-                }
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
 
-                resolve(threadContent);
-            } catch (error) {
-                reject(error);
-            }
-        });
-    });
+				const data = await response.json();
+
+				if (!data.messages || data.messages.length === 0) {
+					throw new Error("No messages found in the thread");
+				}
+
+				let threadContent = "";
+				data.messages.forEach((msg) => {
+					let headers = {};
+					msg.payload.headers.forEach((header) => {
+						headers[header.name.toLowerCase()] = header.value;
+					});
+					// Helper function to recursively find the first text/plain part
+					function findTextPart(parts) {
+						for (const part of parts) {
+							if (part.mimeType === "text/plain") {
+								return part;
+							} else if (part.parts && part.parts.length > 0) {
+								const nestedPart = findTextPart(part.parts);
+								if (nestedPart) {
+									return nestedPart;
+								}
+							}
+						}
+						return null;
+					}
+
+					let body = "";
+					if (msg.payload.parts && msg.payload.parts.length > 0) {
+						const textPart = findTextPart(msg.payload.parts);
+						if (textPart && textPart.body && textPart.body.data) {
+							const base64Url = textPart.body.data;
+							//let bodyText = Buffer.from(base64Url, "base64").toString().trim();
+							let bodyText = decodeBase64(base64Url).trim();
+							let sentIndex = bodyText.indexOf("Sent:");
+							if (sentIndex > 0) {
+								bodyText = bodyText.substring(0, sentIndex);
+							}
+							body += bodyText + "\n";
+						}
+					} else {
+						// If there are no parts, try to get the body directly
+						if (
+							msg.payload.body &&
+							msg.payload.body.size > 0 &&
+							msg.payload.body.data
+						) {
+							//process html and get the text
+							if (msg.payload.mimeType === "text/html") {
+								let base64Text = msg.payload.body.data;
+								//const decodedBody = Buffer.from(base64Url, "base64").toString();
+								let decodedBody = decodeBase64(base64Text);
+								let extractTextFromHTML = (html) => {
+									const doc = new DOMParser().parseFromString(
+										html,
+										"text/html"
+									);
+									const scripts = doc.getElementsByTagName("script");
+									const styles = doc.getElementsByTagName("style");
+									for (let i = scripts.length - 1; i >= 0; i--) {
+										scripts[i].parentNode.removeChild(scripts[i]);
+									}
+									for (let i = styles.length - 1; i >= 0; i--) {
+										styles[i].parentNode.removeChild(styles[i]);
+									}
+									const text = doc.body.textContent || doc.body.innerText || "";
+									return text.replace(/\s+/g, " ").trim();
+								};
+
+								let cleaned = extractTextFromHTML(decodedBody);
+								cleaned = cleaned.replace(/\s+/g, " ").trim();
+								cleaned = cleaned.replace(/https?:\/\/[^\s]+/g, "");
+								body += cleaned.trim() + "\n";
+							} else {
+								let base64Text = msg.payload.body.data;
+								let decodedBody = decodeBase64(base64Text);
+								body += decodedBody.trim() + "\n";
+							}
+						}
+					}
+
+					body = cleanContent(body);
+
+					threadContent += `From: ${headers.from || "Unknown"}\n`;
+					threadContent += `To: ${headers.to || "Unknown"}\n`;
+					threadContent += `Subject: ${headers.subject || "No Subject"}\n`;
+					threadContent += `Body: ${body}\n\n`;
+				});
+
+				if (threadContent.trim() === "") {
+					throw new Error("No email content found");
+				}
+
+				resolve(threadContent);
+			} catch (error) {
+				reject(error);
+			}
+		});
+	});
 }
