@@ -1,4 +1,5 @@
 import { Storage } from "./storage.js";
+import { getEmailThreadIdFromPage, getEmails } from './utils/emailUtil.js';
 
 document.addEventListener("DOMContentLoaded", function () {
 	initializePopup();
@@ -140,28 +141,6 @@ async function initializePopup() {
 		.addEventListener("click", function (event) {
 			event.stopPropagation();
 		});
-
-	async function getEmailThreadIdFromPage() {
-		try {
-			const tabs = await chrome.tabs.query({
-				active: true,
-				currentWindow: true,
-			});
-			if (tabs.length === 0) {
-				throw new Error("No active tab found");
-			}
-			const tab = tabs[0];
-			console.log("Sending message to tab:", tab.id);
-			const response = await chrome.tabs.sendMessage(tab.id, {
-				greeting: "hello",
-			});
-			console.log("Received response:", response);
-			return response;
-		} catch (error) {
-			console.error("Error in getEmailThreadIdFromPage:", error);
-			throw error;
-		}
-	}
 
 	async function conversationExists() {
 		try {
@@ -379,18 +358,18 @@ async function initializePopup() {
 			active: true,
 			currentWindow: true,
 		});
-
+	
 		if (tab.url.startsWith("https://mail.google.com")) {
 			try {
 				const response = await getEmailThreadIdFromPage();
 				if (response && response.threadId) {
 					const threadId = response.threadId;
 					let conversation = await Storage.getConversationById(threadId);
-
+	
 					if (!conversation) {
-						const emailContent = await getEmailContent(threadId);
+						const emailContent = await getEmails(threadId);
 						conversation = await Storage.createConversation(emailContent);
-
+	
 						// Use email content as AI response for debugging
 						conversation.messages.push({
 							role: "assistant",
@@ -398,7 +377,7 @@ async function initializePopup() {
 						});
 						await Storage.updateConversation(conversation);
 					}
-
+	
 					await Storage.setCurrentConversation(conversation);
 					displayConversation(conversation);
 					showChatInput();
@@ -413,71 +392,6 @@ async function initializePopup() {
 		} else {
 			alert("Please open an email in Gmail to start a new conversation.");
 		}
-	}
-
-	async function getEmailContent(threadId) {
-		return new Promise((resolve, reject) => {
-			chrome.identity.getAuthToken(
-				{ interactive: true },
-				async function (token) {
-					if (chrome.runtime.lastError) {
-						reject(chrome.runtime.lastError);
-						return;
-					}
-
-					try {
-						const response = await fetch(
-							`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}`,
-							{
-								headers: {
-									Authorization: `Bearer ${token}`,
-									Accept: "application/json",
-								},
-							}
-						);
-
-						if (!response.ok) {
-							throw new Error(`HTTP error! status: ${response.status}`);
-						}
-
-						const data = await response.json();
-
-						if (!data.messages || data.messages.length === 0) {
-							throw new Error("No messages found in the thread");
-						}
-
-						let emailContent = "";
-						data.messages.forEach((message) => {
-							if (message.payload.parts) {
-								message.payload.parts.forEach((part) => {
-									if (part.mimeType === "text/plain") {
-										emailContent +=
-											atob(
-												part.body.data.replace(/-/g, "+").replace(/_/g, "/")
-											) + "\n\n";
-									}
-								});
-							} else if (message.payload.body.data) {
-								emailContent +=
-									atob(
-										message.payload.body.data
-											.replace(/-/g, "+")
-											.replace(/_/g, "/")
-									) + "\n\n";
-							}
-						});
-
-						if (emailContent === "") {
-							throw new Error("No email content found");
-						}
-
-						resolve(emailContent);
-					} catch (error) {
-						reject(error);
-					}
-				}
-			);
-		});
 	}
 
 	function formatAIResponse(response) {
