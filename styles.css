@@ -89,6 +89,12 @@ body, html {
     padding: 20px;
     display: flex;
     flex-direction: column;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.chat-window::-webkit-scrollbar {
+  display: none; /* WebKit (Safari, Chrome, etc.) */
 }
 
   .message {

@@ -6,13 +6,10 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 async function initializePopup() {
-	const loginContainer = document.getElementById("loginContainer");
 	const mainContainer = document.getElementById("mainContainer");
 	const settingsButton = document.getElementById("settingsButton");
 	const settingsPanel = document.getElementById("settingsPanel");
-	const logoutButton = document.getElementById("logoutButton");
 	const apiKeyInput = document.getElementById("apiKey");
-	const loginButton = document.getElementById("loginButton");
 	const sendButton = document.getElementById("sendButton");
 	const userInput = document.getElementById("userInput");
 	const gmailPopup = document.getElementById("gmailPopup");
@@ -26,18 +23,45 @@ async function initializePopup() {
 	const deleteAllButton = document.getElementById("deleteAllButton");
 	deleteAllButton.addEventListener("click", deleteAllConversations);
 
-	// Hide both containers initially
-	loginContainer.style.display = "none";
-	mainContainer.style.display = "none";
+	mainContainer.style.display = "flex";
 
-	// Check auth status before showing any content
-	const userInfo = await checkAuthStatus();
+	await showMainScreen();
+	getUserInfo();
 
-	if (userInfo) {
-		await showMainScreen();
-	} else {
-		showLoginScreen();
-	}
+	async function showMainScreen() {
+        await checkGmailDomain();
+        await initializeChat();
+    }
+
+    function getUserInfo() {
+        chrome.identity.getAuthToken({ interactive: true }, function (token) {
+            if (chrome.runtime.lastError) {
+                console.error(chrome.runtime.lastError);
+                updateSettingsTitle(null);
+                return;
+            }
+
+            fetch("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.name) {
+                        updateSettingsTitle(data.name);
+                    } else if (data.email) {
+                        const userName = data.email.split("@")[0];
+                        updateSettingsTitle(userName);
+                    } else {
+                        console.log("User information not available");
+                        updateSettingsTitle(null);
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error fetching user info:", error);
+                    updateSettingsTitle(null);
+                });
+        });
+    }
 
 	emailUnreadCount.addEventListener("change", function () {
 		const isEnabled = this.checked;
@@ -86,36 +110,6 @@ async function initializePopup() {
 			aiProvider.value = result.aiProvider;
 		}
 	});
-
-	function getUserInfo() {
-		chrome.identity.getAuthToken({ interactive: true }, function (token) {
-			if (chrome.runtime.lastError) {
-				console.error(chrome.runtime.lastError);
-				updateSettingsTitle(null);
-				return;
-			}
-
-			fetch("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
-				headers: { Authorization: `Bearer ${token}` },
-			})
-				.then((response) => response.json())
-				.then((data) => {
-					if (data.name) {
-						updateSettingsTitle(data.name);
-					} else if (data.email) {
-						const userName = data.email.split("@")[0];
-						updateSettingsTitle(userName);
-					} else {
-						console.log("User information not available");
-						updateSettingsTitle(null);
-					}
-				})
-				.catch((error) => {
-					console.error("Error fetching user info:", error);
-					updateSettingsTitle(null);
-				});
-		});
-	}
 
 	function updateSettingsTitle(userName) {
 		const settingsTitle = document.getElementById("settingsTitle");
@@ -200,14 +194,7 @@ async function initializePopup() {
 		chatInputArea.style.display = "flex";
 	}
 
-	function showLoginScreen() {
-		loginContainer.style.display = "flex";
-		mainContainer.style.display = "none";
-		settingsPanel.classList.remove("open");
-	}
-
 	async function showMainScreen() {
-		loginContainer.style.display = "none";
 		mainContainer.style.display = "flex";
 		settingsPanel.classList.remove("open");
 		await checkGmailDomain();
@@ -445,27 +432,6 @@ async function initializePopup() {
 		}
 	}
 
-	async function login() {
-		try {
-			const token = await new Promise((resolve, reject) => {
-				chrome.identity.getAuthToken({ interactive: true }, function (token) {
-					if (chrome.runtime.lastError) {
-						reject(chrome.runtime.lastError);
-					} else {
-						resolve(token);
-					}
-				});
-			});
-
-			const userInfo = await fetchUserInfo(token);
-			showMainScreen();
-			return userInfo;
-		} catch (error) {
-			console.error("Error during login:", error);
-			return null;
-		}
-	}
-
 	async function fetchUserInfo(token) {
 		const response = await fetch(
 			"https://www.googleapis.com/oauth2/v1/userinfo?alt=json",
@@ -477,23 +443,6 @@ async function initializePopup() {
 			throw new Error("Failed to fetch user info");
 		}
 		return response.json();
-	}
-
-	async function logout() {
-		try {
-			await new Promise((resolve, reject) => {
-				chrome.identity.clearAllCachedAuthTokens(function () {
-					if (chrome.runtime.lastError) {
-						reject(chrome.runtime.lastError);
-					} else {
-						resolve();
-					}
-				});
-			});
-			showLoginScreen();
-		} catch (error) {
-			console.error("Error during logout:", error);
-		}
 	}
 
 	async function sendMessage() {
@@ -519,9 +468,6 @@ async function initializePopup() {
 			updateConversationList();
 		}
 	}
-
-	loginButton.addEventListener("click", login);
-	logoutButton.addEventListener("click", logout);
 	summarizeButton.addEventListener("click", summarizeEmail);
 	sendButton.addEventListener("click", sendMessage);
 
