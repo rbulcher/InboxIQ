@@ -168,7 +168,9 @@ async function initializePopup() {
 			currentWindow: true,
 		});
 		const isGmailDomain = tab.url.startsWith("https://mail.google.com");
-		const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url);
+		//needs to look for #inbox/ or #imp/ or #starred/ #spam/
+		//const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url);
+		const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url) || /#imp\/[^/]+/.test(tab.url) || /#starred\/[^/]+/.test(tab.url) || /#spam\/[^/]+/.test(tab.url);
 
 		if (isGmailDomain && hasOpenEmail) {
 			const hasConversation = await conversationExists();
@@ -208,7 +210,7 @@ async function initializePopup() {
 		});
 		const currentUrl = tab.url;
 		const isGmailDomain = currentUrl.startsWith("https://mail.google.com");
-		const hasOpenEmail = /#inbox\/[^/]+/.test(currentUrl);
+		const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url) || /#imp\/[^/]+/.test(tab.url) || /#starred\/[^/]+/.test(tab.url) || /#spam\/[^/]+/.test(tab.url);
 
 		if (isGmailDomain && hasOpenEmail) {
 			handleGmailEmailThread();
@@ -396,7 +398,7 @@ async function initializePopup() {
 	  }
 
 	async function callOpenAIAPI(content) {
-		const apiKey = "sk-proj-SgxJVSFrhYft5uk42n7PT3BlbkFJkicCymErnQq3OI04wzWx";
+		const apiKey = apiKeyInput.value;
 		const response = await fetch('https://api.openai.com/v1/chat/completions', {
 		  method: 'POST',
 		  headers: {
@@ -426,7 +428,7 @@ async function initializePopup() {
 	  }
 
 	  async function callOpenAIChatAPI(messages) {
-		const apiKey = "sk-proj-SgxJVSFrhYft5uk42n7PT3BlbkFJkicCymErnQq3OI04wzWx";
+		const apiKey = apiKeyInput.value;
 		const response = await fetch('https://api.openai.com/v1/chat/completions', {
 		  method: 'POST',
 		  headers: {

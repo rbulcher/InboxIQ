@@ -1,8 +1,8 @@
 {
 	"manifest_version": 3,
-	"name": "My Chrome Extension",
+	"name": "SumEmails",
 	"version": "1.0",
-	"description": "A Chrome extension with Google authentication",
+	"description": "A Gmail assistant and summarizer.",
 	"action": {
 		"default_popup": "popup.html",
 		"default_icon": {
