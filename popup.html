@@ -11,12 +11,17 @@
 		<div id="mainContainer" class="container" style="display: none">
 			<div id="sidebar">
 				<div class="sidebar-header">
-				  <h2>Conversations</h2>
-				  <img id="deleteAllButton" src="delete.png" alt="Delete All" title="Delete all conversations" class="delete-all-button">
+					<h2>Conversations</h2>
+					<img
+						id="deleteAllButton"
+						src="delete.png"
+						alt="Delete All"
+						title="Delete all conversations"
+						class="delete-all-button"
+					/>
 				</div>
-				<div id="conversationList">
-				</div>
-			  </div>
+				<div id="conversationList"></div>
+			</div>
 			<div id="chatArea">
 				<div id="gmailPopup" class="gmail-popup" style="display: none">
 					Navigate to Gmail to use this tool
@@ -72,8 +77,15 @@
 		<div id="settingsPanel" class="settings-panel">
 			<h2 id="settingsTitle">Settings</h2>
 			<div class="setting-item">
-				<label for="aiProvider">AI Provider:</label>
-				<select id="aiProvider">
+				<label
+					for="aiProvider"
+					title="Select the AI service provider for generating responses"
+					>AI Provider:</label
+				>
+				<select
+					id="aiProvider"
+					title="Choose which AI service to use for generating responses"
+				>
 					<option value="openai">OpenAI</option>
 					<option value="claude">Claude</option>
 					<option value="openwebui">OpenWebUI</option>
@@ -81,10 +93,23 @@
 				</select>
 			</div>
 			<div class="setting-item">
-				<label for="apiKey">API Key:</label>
+				<label
+					for="apiKey"
+					title="Enter the API key for your chosen AI provider"
+					>API Key:</label
+				>
 				<div class="api-key-container">
-					<input type="password" id="apiKey" placeholder="Enter your API key" />
-					<button id="toggleApiKey" class="toggle-api-key">
+					<input
+						type="password"
+						id="apiKey"
+						placeholder="Enter your API key"
+						title="Securely store your AI provider's API key here"
+					/>
+					<button
+						id="toggleApiKey"
+						class="toggle-api-key"
+						title="Toggle visibility of the API key"
+					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 24 24"
@@ -102,23 +127,51 @@
 				</div>
 			</div>
 			<div class="setting-item">
-				<label for="emailRefreshRate">Email Refresh Rate:</label>
-				<select id="emailRefreshRate">
+				<label
+					for="emailRefreshRate"
+					title="Set how often the extension checks for unread emails"
+				>
+					Unread Refresh Rate:
+				</label>
+				<select
+					id="emailRefreshRate"
+					title="Choose how frequently the extension should check for new unread emails"
+				>
 					<option value="30">30 seconds</option>
 					<option value="60">1 minute</option>
 					<option value="300">5 minutes</option>
 				</select>
 			</div>
 			<div class="setting-item">
-				<label for="emailUnreadCount">Email Unread Count:</label>
+				<label
+					for="emailUnreadCount"
+					title="Enable or disable the display of unread email count"
+					>Email Unread Count:</label
+				>
 				<div class="toggle-container">
-					<input type="checkbox" id="emailUnreadCount" class="toggle-input" />
-					<label for="emailUnreadCount" class="toggle-label"></label>
+					<input
+						type="checkbox"
+						id="emailUnreadCount"
+						class="toggle-input"
+						title="Toggle the display of unread email count"
+					/>
+					<label
+						for="emailUnreadCount"
+						class="toggle-label"
+						title="Toggle the display of unread email count"
+					></label>
 				</div>
 			</div>
 			<div class="setting-item">
-				<label for="conversationLifetime">Conversation Lifetime:</label>
-				<select id="conversationLifetime">
+				<label
+					for="conversationLifetime"
+					title="Set how long conversations are stored before being automatically deleted"
+					>Conversation Lifetime:</label
+				>
+				<select
+					id="conversationLifetime"
+					title="Choose how long to keep conversation history before automatic deletion"
+				>
 					<option value="12">12 hours</option>
 					<option value="24">24 hours</option>
 					<option value="48">48 hours</option>

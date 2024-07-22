@@ -25,13 +25,8 @@ async function initializePopup() {
 
 	mainContainer.style.display = "flex";
 
-	await showMainScreen();
 	getUserInfo();
-
-	async function showMainScreen() {
-		await checkGmailDomain();
-		await initializeChat();
-	}
+	checkGmailDomain();
 
 	function getUserInfo() {
 		chrome.identity.getAuthToken({ interactive: true }, function (token) {
@@ -168,13 +163,13 @@ async function initializePopup() {
 			currentWindow: true,
 		});
 		const isGmailDomain = tab.url.startsWith("https://mail.google.com");
-		//needs to look for #inbox/ or #imp/ or #starred/ #spam/
-		//const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url);
+
 		const hasOpenEmail =
 			/#inbox\/[^/]+/.test(tab.url) ||
 			/#imp\/[^/]+/.test(tab.url) ||
 			/#starred\/[^/]+/.test(tab.url) ||
-			/#spam\/[^/]+/.test(tab.url);
+			/#spam\/[^/]+/.test(tab.url) ||
+			/#search\/[^/]+\/[^/]+/.test(tab.url);
 
 		if (isGmailDomain && hasOpenEmail) {
 			const hasConversation = await conversationExists();
@@ -200,13 +195,6 @@ async function initializePopup() {
 		chatInputArea.style.display = "flex";
 	}
 
-	async function showMainScreen() {
-		mainContainer.style.display = "flex";
-		settingsPanel.classList.remove("open");
-		await checkGmailDomain();
-		await initializeChat();
-	}
-
 	async function checkGmailDomain() {
 		const [tab] = await chrome.tabs.query({
 			active: true,
@@ -218,7 +206,8 @@ async function initializePopup() {
 			/#inbox\/[^/]+/.test(tab.url) ||
 			/#imp\/[^/]+/.test(tab.url) ||
 			/#starred\/[^/]+/.test(tab.url) ||
-			/#spam\/[^/]+/.test(tab.url);
+			/#spam\/[^/]+/.test(tab.url) ||
+			/#search\/[^/]+\/[^/]+/.test(tab.url);
 
 		if (isGmailDomain && hasOpenEmail) {
 			handleGmailEmailThread();
@@ -396,7 +385,8 @@ async function initializePopup() {
 
 						conversation = await Storage.createConversation(
 							summary,
-							emailData.subject
+							emailData.subject,
+							threadId
 						);
 
 						conversation.messages.push({
