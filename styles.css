@@ -15,20 +15,6 @@ body, html {
     display: flex;
   }
   
-  /* Login styles */
-  #loginContainer {
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-  }
-  
-  .login-content {
-    background-color: #40414f;
-    padding: 2em;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
-  
   #mainContainer {
     display: flex;
     width: 100%;
@@ -285,23 +271,6 @@ body, html {
     color: #ffffff;
     font-size: 14px;
   }
-  
-  #logoutButton {
-    background-color: #ef4444;
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    border-radius: 5px;
-    width: 25%;
-    transition: background-color 0.3s ease;
-    margin-top: 30px;
-}
 
   .gmail-popup {
     width: 60%;
@@ -448,29 +417,6 @@ body, html {
     transform: translateX(26px);
   }
   
-  /* Logout Button */
-  .logout-container {
-    margin-top: 20px;
-  }
-  
-  .logout-button {
-    background-color: #ef4444;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 5px;
-    width: 100%;
-  }
-  
-  .logout-button:hover {
-    background-color: #dc2626;
-  }
-
   .ai-message a {
     color: #7fdbff; /* A light blue that contrasts well with dark backgrounds */
     text-decoration: none;
