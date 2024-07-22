@@ -106,6 +106,7 @@ body, html {
     color: white;
     align-self: flex-start;
     margin-right: 20%;
+    max-width: 80%;
   }
   
   .input-area {
@@ -433,13 +434,20 @@ body, html {
   border: 1px solid #3e3e3e;
   border-radius: 4px;
   padding: 10px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-width: 100%;
 }
 
 .ai-message code {
-  color: #f8f8f2;
+  font-family: 'Courier New', Courier, monospace;
   background-color: #2d2d2d;
   padding: 2px 4px;
   border-radius: 3px;
+  word-break: break-all;
+  font-size: 0.9em;
+  line-height: 1.4;
 }
 
 /* Style for blockquotes */
@@ -454,3 +462,10 @@ body, html {
 .ai-message h1, .ai-message h2, .ai-message h3, .ai-message h4, .ai-message h5, .ai-message h6 {
   color: #ffffff;
 }
+
+/* Coding Colors Ooow bOy */
+.hljs-keyword { color: #c678dd; }
+.hljs-string { color: #98c379; }
+.hljs-number { color: #d19a66; }
+.hljs-function { color: #61afef; }
+.hljs-comment { color: #5c6370; font-style: italic; letter-spacing: -.5px; }

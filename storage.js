@@ -20,11 +20,12 @@ export const Storage = {
       },
 
     // Create a new conversation
-    createConversation: async (summary) => {
+    createConversation: async (summary, subject) => {
         const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
         const threadId = getEmailThreadIdFromUrl(tab.url);
         const conversation = {
-            id: String(threadId), // Ensure id is stored as a string
+            id: String(threadId),
+            subject: subject,  // Add this line
             messages: [
                 { role: 'system', content: 'Email summary: ' + summary }
             ]

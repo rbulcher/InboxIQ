@@ -25,26 +25,6 @@ export async function getEmails(threadId) {
 		return decodeURIComponent(escape(rawData));
 	}
 
-	function extractTextFromHTML(html) {
-		const doc = new DOMParser().parseFromString(html, "text/html");
-
-		// Remove script and style elements
-		const scripts = doc.getElementsByTagName("script");
-		const styles = doc.getElementsByTagName("style");
-		for (let i = scripts.length - 1; i >= 0; i--) {
-			scripts[i].parentNode.removeChild(scripts[i]);
-		}
-		for (let i = styles.length - 1; i >= 0; i--) {
-			styles[i].parentNode.removeChild(styles[i]);
-		}
-
-		// Get the text content
-		const text = doc.body.textContent || doc.body.innerText || "";
-
-		// Normalize whitespace
-		return text.replace(/\s+/g, " ").trim();
-	}
-
 	function cleanContent(content) {
 		let cleaned = content.replace(/\s+/g, " ").trim();
 		cleaned = cleaned.replace(
@@ -104,11 +84,16 @@ export async function getEmails(threadId) {
 				}
 
 				let threadContent = "";
+				let subject = "No Subject";
 				data.messages.forEach((msg) => {
 					let headers = {};
 					msg.payload.headers.forEach((header) => {
 						headers[header.name.toLowerCase()] = header.value;
 					});
+
+					if (subject === "No Subject" && headers.subject) {
+						subject = headers.subject;
+					}
 					// Helper function to recursively find the first text/plain part
 					function findTextPart(parts) {
 						for (const part of parts) {
@@ -190,7 +175,7 @@ export async function getEmails(threadId) {
 					throw new Error("No email content found");
 				}
 
-				resolve(threadContent);
+				resolve({ content: threadContent, subject: subject });
 			} catch (error) {
 				reject(error);
 			}

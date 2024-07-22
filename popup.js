@@ -29,39 +29,39 @@ async function initializePopup() {
 	getUserInfo();
 
 	async function showMainScreen() {
-        await checkGmailDomain();
-        await initializeChat();
-    }
+		await checkGmailDomain();
+		await initializeChat();
+	}
 
-    function getUserInfo() {
-        chrome.identity.getAuthToken({ interactive: true }, function (token) {
-            if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError);
-                updateSettingsTitle(null);
-                return;
-            }
+	function getUserInfo() {
+		chrome.identity.getAuthToken({ interactive: true }, function (token) {
+			if (chrome.runtime.lastError) {
+				console.error(chrome.runtime.lastError);
+				updateSettingsTitle(null);
+				return;
+			}
 
-            fetch("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
-                headers: { Authorization: `Bearer ${token}` },
-            })
-                .then((response) => response.json())
-                .then((data) => {
-                    if (data.name) {
-                        updateSettingsTitle(data.name);
-                    } else if (data.email) {
-                        const userName = data.email.split("@")[0];
-                        updateSettingsTitle(userName);
-                    } else {
-                        console.log("User information not available");
-                        updateSettingsTitle(null);
-                    }
-                })
-                .catch((error) => {
-                    console.error("Error fetching user info:", error);
-                    updateSettingsTitle(null);
-                });
-        });
-    }
+			fetch("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
+				headers: { Authorization: `Bearer ${token}` },
+			})
+				.then((response) => response.json())
+				.then((data) => {
+					if (data.name) {
+						updateSettingsTitle(data.name);
+					} else if (data.email) {
+						const userName = data.email.split("@")[0];
+						updateSettingsTitle(userName);
+					} else {
+						console.log("User information not available");
+						updateSettingsTitle(null);
+					}
+				})
+				.catch((error) => {
+					console.error("Error fetching user info:", error);
+					updateSettingsTitle(null);
+				});
+		});
+	}
 
 	emailUnreadCount.addEventListener("change", function () {
 		const isEnabled = this.checked;
@@ -170,7 +170,11 @@ async function initializePopup() {
 		const isGmailDomain = tab.url.startsWith("https://mail.google.com");
 		//needs to look for #inbox/ or #imp/ or #starred/ #spam/
 		//const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url);
-		const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url) || /#imp\/[^/]+/.test(tab.url) || /#starred\/[^/]+/.test(tab.url) || /#spam\/[^/]+/.test(tab.url);
+		const hasOpenEmail =
+			/#inbox\/[^/]+/.test(tab.url) ||
+			/#imp\/[^/]+/.test(tab.url) ||
+			/#starred\/[^/]+/.test(tab.url) ||
+			/#spam\/[^/]+/.test(tab.url);
 
 		if (isGmailDomain && hasOpenEmail) {
 			const hasConversation = await conversationExists();
@@ -210,7 +214,11 @@ async function initializePopup() {
 		});
 		const currentUrl = tab.url;
 		const isGmailDomain = currentUrl.startsWith("https://mail.google.com");
-		const hasOpenEmail = /#inbox\/[^/]+/.test(tab.url) || /#imp\/[^/]+/.test(tab.url) || /#starred\/[^/]+/.test(tab.url) || /#spam\/[^/]+/.test(tab.url);
+		const hasOpenEmail =
+			/#inbox\/[^/]+/.test(tab.url) ||
+			/#imp\/[^/]+/.test(tab.url) ||
+			/#starred\/[^/]+/.test(tab.url) ||
+			/#spam\/[^/]+/.test(tab.url);
 
 		if (isGmailDomain && hasOpenEmail) {
 			handleGmailEmailThread();
@@ -290,8 +298,10 @@ async function initializePopup() {
 
 			const titleSpan = document.createElement("span");
 			titleSpan.className = "conversation-title";
-			const idString = String(conv.id);
-			titleSpan.textContent = `Conversation -  ${idString.slice(-4)}`;
+			const title = conv.subject
+				? conv.subject.split(" ").slice(0, 3).join(" ") + "..."
+				: `Conversation - ${String(conv.id).slice(-4)}`;
+			titleSpan.textContent = title;
 			item.appendChild(titleSpan);
 
 			const deleteButton = document.createElement("button");
@@ -355,104 +365,180 @@ async function initializePopup() {
 
 	async function summarizeEmail() {
 		const [tab] = await chrome.tabs.query({
-		  active: true,
-		  currentWindow: true,
+			active: true,
+			currentWindow: true,
 		});
-	  
-		if (tab.url.startsWith("https://mail.google.com")) {
-		  try {
-			const response = await getEmailThreadIdFromPage();
-			if (response && response.threadId) {
-			  const threadId = response.threadId;
-			  let conversation = await Storage.getConversationById(threadId);
-	  
-			  if (!conversation) {
-				const emailContent = await getEmails(threadId);
-	  
-				// Send email content to AI Provider, get response
-				const summary = await callOpenAIAPI(emailContent);
-	  
-				conversation = await Storage.createConversation(summary);
-	  
-				conversation.messages.push({
-				  role: "assistant",
-				  content: formatAIResponse(summary),
-				});
-				await Storage.updateConversation(conversation);
-			  }
-	  
-			  await Storage.setCurrentConversation(conversation);
-			  displayConversation(conversation);
-			  showChatInput();
-			  updateConversationList();
-			} else {
-			  throw new Error("No thread ID received");
-			}
-		  } catch (error) {
-			console.error("Error processing email:", error);
-			alert("Error processing email. Please try again.");
-		  }
-		} else {
-		  alert("Please open an email in Gmail to start a new conversation.");
-		}
-	  }
 
+		if (tab.url.startsWith("https://mail.google.com")) {
+			try {
+				const response = await getEmailThreadIdFromPage();
+				if (response && response.threadId) {
+					const threadId = response.threadId;
+					let conversation = await Storage.getConversationById(threadId);
+
+					if (!conversation) {
+						const emailData = await getEmails(threadId);
+
+						// Create a new element to display the streaming summary
+						const summaryElement = document.createElement("div");
+						summaryElement.className = "message ai-message";
+						chatWindow.appendChild(summaryElement);
+
+						// Send email content to AI Provider, get streaming response
+						const stream = await callOpenAIAPI(emailData.content);
+						let summary = "";
+
+						for await (const chunk of stream) {
+							summary += chunk;
+							summaryElement.innerHTML = formatAIResponse(summary);
+							chatWindow.scrollTop = chatWindow.scrollHeight;
+						}
+
+						conversation = await Storage.createConversation(
+							summary,
+							emailData.subject
+						);
+
+						conversation.messages.push({
+							role: "assistant",
+							content: summary,
+						});
+						await Storage.updateConversation(conversation);
+					}
+
+					await Storage.setCurrentConversation(conversation);
+					displayConversation(conversation);
+					showChatInput();
+					updateConversationList();
+				} else {
+					throw new Error("No thread ID received");
+				}
+			} catch (error) {
+				console.error("Error processing email:", error);
+				alert("Error processing email. Please try again.");
+			}
+		} else {
+			alert("Please open an email in Gmail to start a new conversation.");
+		}
+	}
 	async function callOpenAIAPI(content) {
 		const apiKey = apiKeyInput.value;
-		const response = await fetch('https://api.openai.com/v1/chat/completions', {
-		  method: 'POST',
-		  headers: {
-			'Content-Type': 'application/json',
-			'Authorization': `Bearer ${apiKey}`
-		  },
-		  body: JSON.stringify({
-			"model": "gpt-4o-mini",
-			"messages": [
-			  {"role": "system", "content": "Summarize the following email or emails in the thread. Please give 2-3 main points, and any key speakers if there are any:"},
-			  {"role": "user", "content": content}
-			],
-			"temperature": 1,
-			"max_tokens": 256,
-			"top_p": 1,
-			"frequency_penalty": 0,
-			"presence_penalty": 0
-		  })
+		const response = await fetch("https://api.openai.com/v1/chat/completions", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${apiKey}`,
+			},
+			body: JSON.stringify({
+				model: "gpt-4o-mini",
+				messages: [
+					{
+						role: "system",
+						content:
+							"Summarize the following email or emails in the thread. Please give 2-3 main points, and any key speakers if there are any:",
+					},
+					{ role: "user", content: content },
+				],
+				temperature: 1,
+				max_tokens: 256,
+				top_p: 1,
+				frequency_penalty: 0,
+				presence_penalty: 0,
+				stream: true,
+			}),
 		});
-	  
-		if (!response.ok) {
-		  throw new Error(`HTTP error! status: ${response.status}`);
-		}
-	  
-		const data = await response.json();
-		return data.choices[0].message.content;
-	  }
 
-	  async function callOpenAIChatAPI(messages) {
-		const apiKey = apiKeyInput.value;
-		const response = await fetch('https://api.openai.com/v1/chat/completions', {
-		  method: 'POST',
-		  headers: {
-			'Content-Type': 'application/json',
-			'Authorization': `Bearer ${apiKey}`
-		  },
-		  body: JSON.stringify({
-			"model": "gpt-4o-mini",
-			"messages": messages,
-			"temperature": 1,
-			"max_tokens": 256,
-			"top_p": 1,
-			"frequency_penalty": 0,
-			"presence_penalty": 0
-		  })
-		});
-	  
 		if (!response.ok) {
-		  throw new Error(`HTTP error! status: ${response.status}`);
+			throw new Error(`HTTP error! status: ${response.status}`);
 		}
-	  
-		const data = await response.json();
-		return data.choices[0].message.content;
-	  }
+
+		const reader = response.body.getReader();
+		const decoder = new TextDecoder("utf-8");
+		let buffer = "";
+
+		return {
+			async *[Symbol.asyncIterator]() {
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) return;
+
+					buffer += decoder.decode(value, { stream: true });
+					const lines = buffer.split("\n");
+					buffer = lines.pop();
+
+					for (const line of lines) {
+						if (line.startsWith("data: ")) {
+							const data = line.slice(6);
+							if (data === "[DONE]") return;
+							try {
+								const parsed = JSON.parse(data);
+								const content = parsed.choices[0]?.delta?.content;
+								if (content) yield content;
+							} catch (error) {
+								console.error("Error parsing JSON:", error);
+							}
+						}
+					}
+				}
+			},
+		};
+	}
+
+	async function callOpenAIChatAPI(messages) {
+		const apiKey = apiKeyInput.value;
+		const response = await fetch("https://api.openai.com/v1/chat/completions", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${apiKey}`,
+			},
+			body: JSON.stringify({
+				model: "gpt-4o-mini",
+				messages: messages,
+				temperature: 1,
+				max_tokens: 256,
+				top_p: 1,
+				frequency_penalty: 0,
+				presence_penalty: 0,
+				stream: true,
+			}),
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const reader = response.body.getReader();
+		const decoder = new TextDecoder("utf-8");
+		let buffer = "";
+
+		return {
+			async *[Symbol.asyncIterator]() {
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) return;
+
+					buffer += decoder.decode(value, { stream: true });
+					const lines = buffer.split("\n");
+					buffer = lines.pop();
+
+					for (const line of lines) {
+						if (line.startsWith("data: ")) {
+							const data = line.slice(6);
+							if (data === "[DONE]") return;
+							try {
+								const parsed = JSON.parse(data);
+								const content = parsed.choices[0]?.delta?.content;
+								if (content) yield content;
+							} catch (error) {
+								console.error("Error parsing JSON:", error);
+							}
+						}
+					}
+				}
+			},
+		};
+	}
 
 	function formatAIResponse(response) {
 		// Convert markdown to HTML
@@ -470,75 +556,49 @@ async function initializePopup() {
 		return tempDiv.innerHTML;
 	}
 
-	async function checkAuthStatus() {
-		try {
-			const token = await new Promise((resolve, reject) => {
-				chrome.identity.getAuthToken({ interactive: false }, function (token) {
-					if (chrome.runtime.lastError) {
-						reject(chrome.runtime.lastError);
-					} else {
-						resolve(token);
-					}
-				});
-			});
-
-			if (token) {
-				const userInfo = await fetchUserInfo(token);
-				return userInfo;
-			} else {
-				return null;
-			}
-		} catch (error) {
-			console.error("Error checking auth status:", error);
-			return null;
-		}
-	}
-
-	async function fetchUserInfo(token) {
-		const response = await fetch(
-			"https://www.googleapis.com/oauth2/v1/userinfo?alt=json",
-			{
-				headers: { Authorization: `Bearer ${token}` },
-			}
-		);
-		if (!response.ok) {
-			throw new Error("Failed to fetch user info");
-		}
-		return response.json();
-	}
-
 	async function sendMessage() {
 		const userMessage = userInput.value.trim();
 		if (userMessage) {
-		  const conversation = await Storage.getCurrentConversation();
-		  if (!conversation) {
-			alert(
-			  "No active conversation. Please start a new conversation in Gmail."
-			);
-			return;
-		  }
-	  
-		  // Add user message to conversation
-		  conversation.messages.push({ role: "user", content: userMessage });
-		  await Storage.updateConversation(conversation);
-		  displayConversation(conversation);
-		  userInput.value = "";
-	  
-		  try {
-			// Call OpenAI API
-			const aiResponse = await callOpenAIChatAPI(conversation.messages);
-	  
-			// Add AI response to conversation
-			conversation.messages.push({ role: "assistant", content: aiResponse });
+			const conversation = await Storage.getCurrentConversation();
+			if (!conversation) {
+				alert(
+					"No active conversation. Please start a new conversation in Gmail."
+				);
+				return;
+			}
+
+			// Add user message to conversation
+			conversation.messages.push({ role: "user", content: userMessage });
 			await Storage.updateConversation(conversation);
 			displayConversation(conversation);
-			updateConversationList();
-		  } catch (error) {
-			console.error("Error getting AI response:", error);
-			alert("Error getting AI response. Please try again.");
-		  }
+			userInput.value = "";
+
+			try {
+				// Create a new AI message element
+				const aiMessageElement = document.createElement("div");
+				aiMessageElement.className = "message ai-message";
+				chatWindow.appendChild(aiMessageElement);
+
+				// Call OpenAI API with streaming
+				const stream = await callOpenAIChatAPI(conversation.messages);
+				let aiResponse = "";
+
+				for await (const chunk of stream) {
+					aiResponse += chunk;
+					aiMessageElement.innerHTML = formatAIResponse(aiResponse);
+					chatWindow.scrollTop = chatWindow.scrollHeight;
+				}
+
+				// Add AI response to conversation
+				conversation.messages.push({ role: "assistant", content: aiResponse });
+				await Storage.updateConversation(conversation);
+				updateConversationList();
+			} catch (error) {
+				console.error("Error getting AI response:", error);
+				alert("Error getting AI response. Please try again.");
+			}
 		}
-	  }
+	}
 	summarizeButton.addEventListener("click", summarizeEmail);
 	sendButton.addEventListener("click", sendMessage);
 
