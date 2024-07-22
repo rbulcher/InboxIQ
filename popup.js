@@ -353,44 +353,104 @@ async function initializePopup() {
 
 	async function summarizeEmail() {
 		const [tab] = await chrome.tabs.query({
-			active: true,
-			currentWindow: true,
+		  active: true,
+		  currentWindow: true,
 		});
-
+	  
 		if (tab.url.startsWith("https://mail.google.com")) {
-			try {
-				const response = await getEmailThreadIdFromPage();
-				if (response && response.threadId) {
-					const threadId = response.threadId;
-					let conversation = await Storage.getConversationById(threadId);
-
-					if (!conversation) {
-						const emailContent = await getEmails(threadId);
-						conversation = await Storage.createConversation(emailContent);
-
-						// Use email content as AI response for debugging
-						conversation.messages.push({
-							role: "assistant",
-							content: formatAIResponse(emailContent),
-						});
-						await Storage.updateConversation(conversation);
-					}
-
-					await Storage.setCurrentConversation(conversation);
-					displayConversation(conversation);
-					showChatInput();
-					updateConversationList();
-				} else {
-					throw new Error("No thread ID received");
-				}
-			} catch (error) {
-				console.error("Error processing email:", error);
-				alert("Error processing email. Please try again.");
+		  try {
+			const response = await getEmailThreadIdFromPage();
+			if (response && response.threadId) {
+			  const threadId = response.threadId;
+			  let conversation = await Storage.getConversationById(threadId);
+	  
+			  if (!conversation) {
+				const emailContent = await getEmails(threadId);
+	  
+				// Send email content to AI Provider, get response
+				const summary = await callOpenAIAPI(emailContent);
+	  
+				conversation = await Storage.createConversation(summary);
+	  
+				conversation.messages.push({
+				  role: "assistant",
+				  content: formatAIResponse(summary),
+				});
+				await Storage.updateConversation(conversation);
+			  }
+	  
+			  await Storage.setCurrentConversation(conversation);
+			  displayConversation(conversation);
+			  showChatInput();
+			  updateConversationList();
+			} else {
+			  throw new Error("No thread ID received");
 			}
+		  } catch (error) {
+			console.error("Error processing email:", error);
+			alert("Error processing email. Please try again.");
+		  }
 		} else {
-			alert("Please open an email in Gmail to start a new conversation.");
+		  alert("Please open an email in Gmail to start a new conversation.");
 		}
-	}
+	  }
+
+	async function callOpenAIAPI(content) {
+		const apiKey = "sk-proj-SgxJVSFrhYft5uk42n7PT3BlbkFJkicCymErnQq3OI04wzWx";
+		const response = await fetch('https://api.openai.com/v1/chat/completions', {
+		  method: 'POST',
+		  headers: {
+			'Content-Type': 'application/json',
+			'Authorization': `Bearer ${apiKey}`
+		  },
+		  body: JSON.stringify({
+			"model": "gpt-4o-mini",
+			"messages": [
+			  {"role": "system", "content": "Summarize the following email or emails in the thread. Please give 2-3 main points, and any key speakers if there are any:"},
+			  {"role": "user", "content": content}
+			],
+			"temperature": 1,
+			"max_tokens": 256,
+			"top_p": 1,
+			"frequency_penalty": 0,
+			"presence_penalty": 0
+		  })
+		});
+	  
+		if (!response.ok) {
+		  throw new Error(`HTTP error! status: ${response.status}`);
+		}
+	  
+		const data = await response.json();
+		return data.choices[0].message.content;
+	  }
+
+	  async function callOpenAIChatAPI(messages) {
+		const apiKey = "sk-proj-SgxJVSFrhYft5uk42n7PT3BlbkFJkicCymErnQq3OI04wzWx";
+		const response = await fetch('https://api.openai.com/v1/chat/completions', {
+		  method: 'POST',
+		  headers: {
+			'Content-Type': 'application/json',
+			'Authorization': `Bearer ${apiKey}`
+		  },
+		  body: JSON.stringify({
+			"model": "gpt-4o-mini",
+			"messages": messages,
+			"temperature": 1,
+			"max_tokens": 256,
+			"top_p": 1,
+			"frequency_penalty": 0,
+			"presence_penalty": 0
+		  })
+		});
+	  
+		if (!response.ok) {
+		  throw new Error(`HTTP error! status: ${response.status}`);
+		}
+	  
+		const data = await response.json();
+		return data.choices[0].message.content;
+	  }
 
 	function formatAIResponse(response) {
 		// Convert markdown to HTML
@@ -448,26 +508,35 @@ async function initializePopup() {
 	async function sendMessage() {
 		const userMessage = userInput.value.trim();
 		if (userMessage) {
-			const conversation = await Storage.getCurrentConversation();
-			if (!conversation) {
-				alert(
-					"No active conversation. Please start a new conversation in Gmail."
-				);
-				return;
-			}
-
-			conversation.messages.push({ role: "user", content: userMessage });
-			await Storage.updateConversation(conversation);
-			displayConversation(conversation);
-			userInput.value = "";
-
-			const aiResponse = "This is a placeholder for the AI response.";
+		  const conversation = await Storage.getCurrentConversation();
+		  if (!conversation) {
+			alert(
+			  "No active conversation. Please start a new conversation in Gmail."
+			);
+			return;
+		  }
+	  
+		  // Add user message to conversation
+		  conversation.messages.push({ role: "user", content: userMessage });
+		  await Storage.updateConversation(conversation);
+		  displayConversation(conversation);
+		  userInput.value = "";
+	  
+		  try {
+			// Call OpenAI API
+			const aiResponse = await callOpenAIChatAPI(conversation.messages);
+	  
+			// Add AI response to conversation
 			conversation.messages.push({ role: "assistant", content: aiResponse });
 			await Storage.updateConversation(conversation);
 			displayConversation(conversation);
 			updateConversationList();
+		  } catch (error) {
+			console.error("Error getting AI response:", error);
+			alert("Error getting AI response. Please try again.");
+		  }
 		}
-	}
+	  }
 	summarizeButton.addEventListener("click", summarizeEmail);
 	sendButton.addEventListener("click", sendMessage);
 
