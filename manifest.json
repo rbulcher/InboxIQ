@@ -1,13 +1,14 @@
 {
 	"manifest_version": 3,
-	"name": "SumEmails",
+	"name": "InboxIQ",
 	"version": "1.0",
 	"description": "A Gmail assistant and summarizer.",
 	"action": {
-		"default_popup": "popup.html",
-		"default_icon": {
-			"128": "icon.png"
-		}
+		"default_popup": "popup.html"
+	},
+	"icons": {
+		"48": "icon.png",
+		"128": "icon.png"
 	},
 	"content_scripts": [
 		{
