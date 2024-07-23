@@ -356,7 +356,8 @@ async function initializePopup() {
 	function displayConversation(conversation) {
 		chatWindow.innerHTML = "";
 
-		conversation.messages.forEach((message) => {
+		// slice(1) is to ignore the prompt message
+		conversation.messages.slice(1).forEach((message) => {
 			if (message.role !== "system") {
 				const messageElement = document.createElement("div");
 				messageElement.className = `message ${
