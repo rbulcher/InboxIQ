@@ -17,13 +17,13 @@ async function updateMessageInfo() {
 	let messageLimit;
 	switch (status) {
 		case "Free":
-			messageLimit = 10;
+			messageLimit = 5;
 			break;
 		case "Pro":
 			messageLimit = Infinity;
 			break;
 		default:
-			messageLimit = 10;
+			messageLimit = 5;
 	}
 
 	const messagesRemaining =

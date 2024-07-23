@@ -103,7 +103,7 @@ export const Storage = {
 		const result = await chrome.storage.local.get("messageTimestamps");
 		let timestamps = result.messageTimestamps || [];
 
-		const messageLimit = status === "Free" ? 10 : Infinity;
+		const messageLimit = status === "Free" ? 5 : Infinity;
 
 		const now = Date.now();
 		const oneDayAgo = now - 24 * 60 * 60 * 1000;
