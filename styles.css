@@ -435,13 +435,11 @@ body, html {
 }
 
 .ai-message code {
-  font-family: 'Courier New', Courier, monospace;
   background-color: #2d2d2d;
   padding: 2px 4px;
   border-radius: 3px;
-  word-break: break-all;
-  font-size: 0.9em;
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: normal;
 }
 
 /* Style for blockquotes */
