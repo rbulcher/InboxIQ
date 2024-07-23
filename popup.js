@@ -1,9 +1,87 @@
 import { Storage } from "./storage.js";
 import { getEmailThreadIdFromPage, getEmails } from "./utils/emailUtil.js";
+import { callOpenAIAPI, callOpenAIChatAPI } from "./utils/openAiUtil.js";
 
 document.addEventListener("DOMContentLoaded", function () {
 	initializePopup();
 });
+
+async function updateMessageInfo() {
+	const status = await Storage.getUserStatus();
+	const messageCount = await Storage.getMessageCount();
+	let messageLimit;
+	switch (status) {
+		case "Free":
+			messageLimit = 5;
+			break;
+		case "Plus":
+			messageLimit = 50;
+			break;
+		case "Pro":
+			messageLimit = Infinity;
+			break;
+		default:
+			messageLimit = 10;
+	}
+
+	const messagesRemaining =
+		messageLimit === Infinity
+			? "Unlimited"
+			: Math.max(0, messageLimit - messageCount);
+
+	const lastMessageTime = await Storage.getLastMessageTime();
+	const refreshTime = calculateRefreshTime(lastMessageTime);
+
+	document.getElementById(
+		"messagesRemaining"
+	).textContent = `Messages Remaining: ${messagesRemaining}`;
+
+	document.getElementById(
+		"messageRefresh"
+	).textContent = `Message Refresh: ${refreshTime}`;
+}
+function calculateRefreshTime(lastMessageTime) {
+	if (!lastMessageTime) return "24hr";
+
+	const now = Date.now();
+	const refreshDate = new Date(lastMessageTime);
+	refreshDate.setHours(refreshDate.getHours() + 24);
+
+	const timeDiff = refreshDate - now;
+	if (timeDiff <= 0) return "0hr";
+
+	const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+	return `${hours}hr`;
+}
+async function updateUserStatusDisplay() {
+	const userStatus = await Storage.getUserStatus();
+	const userStatusElement = document.getElementById("userStatus");
+	if (userStatusElement) {
+		userStatusElement.textContent = userStatus;
+	}
+
+	// Update the radio button
+	const selectedRadio = document.querySelector(
+		`input[name="userStatus"][value="${userStatus}"]`
+	);
+	if (selectedRadio) {
+		selectedRadio.checked = true;
+	}
+}
+
+async function updateMessageCountDisplay() {
+	const messageCount = await Storage.getMessageCount();
+	const messageCountElement = document.getElementById("messageCount");
+	if (messageCountElement) {
+		messageCountElement.textContent = `Messages sent today: ${messageCount}`;
+	}
+}
+
+async function updateUserStatus(event) {
+	const newStatus = event.target.value;
+	await Storage.setUserStatus(newStatus);
+	await updateUserStatusDisplay();
+}
 
 async function initializePopup() {
 	const mainContainer = document.getElementById("mainContainer");
@@ -18,7 +96,6 @@ async function initializePopup() {
 	const chatInputArea = document.getElementById("chatInputArea");
 	const chatWindow = document.getElementById("chatWindow");
 	const toggleApiKey = document.getElementById("toggleApiKey");
-	const aiProvider = document.getElementById("aiProvider");
 	const emailUnreadCount = document.getElementById("emailUnreadCount");
 	const deleteAllButton = document.getElementById("deleteAllButton");
 	deleteAllButton.addEventListener("click", deleteAllConversations);
@@ -27,6 +104,18 @@ async function initializePopup() {
 
 	getUserInfo();
 	checkGmailDomain();
+	const userStatusOptions = document.querySelectorAll(
+		'input[name="userStatus"]'
+	);
+	userStatusOptions.forEach((option) => {
+		option.addEventListener("change", updateUserStatus);
+	});
+
+	await updateUserStatusDisplay();
+	await updateMessageInfo();
+
+	// Set up an interval to update the message info every minute
+	setInterval(updateMessageInfo, 1000);
 
 	function getUserInfo() {
 		chrome.identity.getAuthToken({ interactive: true }, function (token) {
@@ -93,19 +182,6 @@ async function initializePopup() {
 		}
 	});
 
-	aiProvider.addEventListener("change", function () {
-		chrome.storage.sync.set({ aiProvider: this.value }, function () {
-			console.log("AI Provider saved:", aiProvider.value);
-		});
-	});
-
-	// Load saved AI Provider
-	chrome.storage.sync.get(["aiProvider"], function (result) {
-		if (result.aiProvider) {
-			aiProvider.value = result.aiProvider;
-		}
-	});
-
 	function updateSettingsTitle(userName) {
 		const settingsTitle = document.getElementById("settingsTitle");
 		if (userName) {
@@ -114,9 +190,6 @@ async function initializePopup() {
 			settingsTitle.textContent = "Settings";
 		}
 	}
-
-	// Call this function when the popup opens
-	getUserInfo();
 
 	toggleApiKey.addEventListener("click", function () {
 		if (apiKeyInput.type === "password") {
@@ -353,181 +426,67 @@ async function initializePopup() {
 	}
 
 	async function summarizeEmail() {
-		const [tab] = await chrome.tabs.query({
-			active: true,
-			currentWindow: true,
-		});
+		if (await Storage.canSendMessage()) {
+			const [tab] = await chrome.tabs.query({
+				active: true,
+				currentWindow: true,
+			});
 
-		if (tab.url.startsWith("https://mail.google.com")) {
-			try {
-				const response = await getEmailThreadIdFromPage();
-				if (response && response.threadId) {
-					const threadId = response.threadId;
-					let conversation = await Storage.getConversationById(threadId);
+			if (tab.url.startsWith("https://mail.google.com")) {
+				try {
+					const response = await getEmailThreadIdFromPage();
+					if (response && response.threadId) {
+						const threadId = response.threadId;
+						let conversation = await Storage.getConversationById(threadId);
 
-					if (!conversation) {
-						const emailData = await getEmails(threadId);
+						if (!conversation) {
+							const emailData = await getEmails(threadId);
 
-						// Create a new element to display the streaming summary
-						const summaryElement = document.createElement("div");
-						summaryElement.className = "message ai-message";
-						chatWindow.appendChild(summaryElement);
+							// Create a new element to display the streaming summary
+							const summaryElement = document.createElement("div");
+							summaryElement.className = "message ai-message";
+							chatWindow.appendChild(summaryElement);
 
-						// Send email content to AI Provider, get streaming response
-						const stream = await callOpenAIAPI(emailData.content);
-						let summary = "";
+							// Send email content to AI Provider, get streaming response
+							const stream = await callOpenAIAPI(emailData.content);
+							let summary = "";
 
-						for await (const chunk of stream) {
-							summary += chunk;
-							summaryElement.innerHTML = formatAIResponse(summary);
-							chatWindow.scrollTop = chatWindow.scrollHeight;
+							for await (const chunk of stream) {
+								summary += chunk;
+								summaryElement.innerHTML = formatAIResponse(summary);
+								chatWindow.scrollTop = chatWindow.scrollHeight;
+							}
+
+							conversation = await Storage.createConversation(
+								summary,
+								emailData.subject,
+								threadId
+							);
+
+							conversation.messages.push({
+								role: "assistant",
+								content: summary,
+							});
+							await Storage.updateConversation(conversation);
+							await Storage.recordMessage();
+							await updateMessageInfo();
 						}
 
-						conversation = await Storage.createConversation(
-							summary,
-							emailData.subject,
-							threadId
-						);
-
-						conversation.messages.push({
-							role: "assistant",
-							content: summary,
-						});
-						await Storage.updateConversation(conversation);
+						await Storage.setCurrentConversation(conversation);
+						displayConversation(conversation);
+						showChatInput();
+						updateConversationList();
+					} else {
+						throw new Error("No thread ID received");
 					}
-
-					await Storage.setCurrentConversation(conversation);
-					displayConversation(conversation);
-					showChatInput();
-					updateConversationList();
-				} else {
-					throw new Error("No thread ID received");
+				} catch (error) {
+					console.error("Error processing email:", error);
+					alert("Error processing email. Please try again.");
 				}
-			} catch (error) {
-				console.error("Error processing email:", error);
-				alert("Error processing email. Please try again.");
+			} else {
+				alert("Please open an email in Gmail to start a new conversation.");
 			}
-		} else {
-			alert("Please open an email in Gmail to start a new conversation.");
 		}
-	}
-	async function callOpenAIAPI(content) {
-		const apiKey = apiKeyInput.value;
-		const response = await fetch("https://api.openai.com/v1/chat/completions", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${apiKey}`,
-			},
-			body: JSON.stringify({
-				model: "gpt-4o-mini",
-				messages: [
-					{
-						role: "system",
-						content:
-							"Summarize the following email or emails in the thread. Please give 2-3 main points, and any key speakers if there are any:",
-					},
-					{ role: "user", content: content },
-				],
-				temperature: 1,
-				max_tokens: 256,
-				top_p: 1,
-				frequency_penalty: 0,
-				presence_penalty: 0,
-				stream: true,
-			}),
-		});
-
-		if (!response.ok) {
-			throw new Error(`HTTP error! status: ${response.status}`);
-		}
-
-		const reader = response.body.getReader();
-		const decoder = new TextDecoder("utf-8");
-		let buffer = "";
-
-		return {
-			async *[Symbol.asyncIterator]() {
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) return;
-
-					buffer += decoder.decode(value, { stream: true });
-					const lines = buffer.split("\n");
-					buffer = lines.pop();
-
-					for (const line of lines) {
-						if (line.startsWith("data: ")) {
-							const data = line.slice(6);
-							if (data === "[DONE]") return;
-							try {
-								const parsed = JSON.parse(data);
-								const content = parsed.choices[0]?.delta?.content;
-								if (content) yield content;
-							} catch (error) {
-								console.error("Error parsing JSON:", error);
-							}
-						}
-					}
-				}
-			},
-		};
-	}
-
-	async function callOpenAIChatAPI(messages) {
-		const apiKey = apiKeyInput.value;
-		const response = await fetch("https://api.openai.com/v1/chat/completions", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${apiKey}`,
-			},
-			body: JSON.stringify({
-				model: "gpt-4o-mini",
-				messages: messages,
-				temperature: 1,
-				max_tokens: 256,
-				top_p: 1,
-				frequency_penalty: 0,
-				presence_penalty: 0,
-				stream: true,
-			}),
-		});
-
-		if (!response.ok) {
-			throw new Error(`HTTP error! status: ${response.status}`);
-		}
-
-		const reader = response.body.getReader();
-		const decoder = new TextDecoder("utf-8");
-		let buffer = "";
-
-		return {
-			async *[Symbol.asyncIterator]() {
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) return;
-
-					buffer += decoder.decode(value, { stream: true });
-					const lines = buffer.split("\n");
-					buffer = lines.pop();
-
-					for (const line of lines) {
-						if (line.startsWith("data: ")) {
-							const data = line.slice(6);
-							if (data === "[DONE]") return;
-							try {
-								const parsed = JSON.parse(data);
-								const content = parsed.choices[0]?.delta?.content;
-								if (content) yield content;
-							} catch (error) {
-								console.error("Error parsing JSON:", error);
-							}
-						}
-					}
-				}
-			},
-		};
 	}
 
 	function formatAIResponse(response) {
@@ -549,43 +508,63 @@ async function initializePopup() {
 	async function sendMessage() {
 		const userMessage = userInput.value.trim();
 		if (userMessage) {
-			const conversation = await Storage.getCurrentConversation();
-			if (!conversation) {
-				alert(
-					"No active conversation. Please start a new conversation in Gmail."
-				);
-				return;
-			}
-
-			// Add user message to conversation
-			conversation.messages.push({ role: "user", content: userMessage });
-			await Storage.updateConversation(conversation);
-			displayConversation(conversation);
-			userInput.value = "";
-
-			try {
-				// Create a new AI message element
-				const aiMessageElement = document.createElement("div");
-				aiMessageElement.className = "message ai-message";
-				chatWindow.appendChild(aiMessageElement);
-
-				// Call OpenAI API with streaming
-				const stream = await callOpenAIChatAPI(conversation.messages);
-				let aiResponse = "";
-
-				for await (const chunk of stream) {
-					aiResponse += chunk;
-					aiMessageElement.innerHTML = formatAIResponse(aiResponse);
-					chatWindow.scrollTop = chatWindow.scrollHeight;
+			if (await Storage.canSendMessage()) {
+				const conversation = await Storage.getCurrentConversation();
+				if (!conversation) {
+					alert(
+						"No active conversation. Please start a new conversation in Gmail."
+					);
+					return;
 				}
 
-				// Add AI response to conversation
-				conversation.messages.push({ role: "assistant", content: aiResponse });
+				// Add user message to conversation
+				conversation.messages.push({ role: "user", content: userMessage });
 				await Storage.updateConversation(conversation);
-				updateConversationList();
-			} catch (error) {
-				console.error("Error getting AI response:", error);
-				alert("Error getting AI response. Please try again.");
+				displayConversation(conversation);
+				userInput.value = "";
+
+				try {
+					// Create a new AI message element
+					const aiMessageElement = document.createElement("div");
+					aiMessageElement.className = "message ai-message";
+					chatWindow.appendChild(aiMessageElement);
+
+					// Call OpenAI API with streaming
+					const stream = await callOpenAIChatAPI(conversation.messages);
+					let aiResponse = "";
+
+					for await (const chunk of stream) {
+						aiResponse += chunk;
+						aiMessageElement.innerHTML = formatAIResponse(aiResponse);
+						chatWindow.scrollTop = chatWindow.scrollHeight;
+					}
+
+					// Add AI response to conversation
+					conversation.messages.push({
+						role: "assistant",
+						content: aiResponse,
+					});
+					await Storage.updateConversation(conversation);
+					await Storage.recordMessage();
+					await updateMessageInfo();
+					updateConversationList();
+				} catch (error) {
+					console.error("Error getting AI response:", error);
+					alert("Error getting AI response. Please try again.");
+				}
+			} else {
+				//get time remaining on message refresh
+				const lastMessageTime = await Storage.getLastMessageTime();
+				const refreshTime = calculateRefreshTime(lastMessageTime);
+				if(refreshTime === "1hr"){
+					alert(
+						`You have reached the message limit. It will refresh in ${refreshTime}, or you can upgrade to a paid plan.`
+					);
+				}else {
+					alert(
+						`You have reached the message limit. It will refresh in ${refreshTime}s, or you can upgrade to a paid plan.`
+					);
+				}
 			}
 		}
 	}

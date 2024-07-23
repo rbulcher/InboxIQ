@@ -469,3 +469,40 @@ body, html {
 .hljs-number { color: #d19a66; }
 .hljs-function { color: #61afef; }
 .hljs-comment { color: #5c6370; font-style: italic; letter-spacing: -.5px; }
+
+.user-status {
+  font-weight: bold;
+  padding: 5px 10px;
+  border-radius: 5px;
+  background-color: #4285F4;
+  color: white;
+}
+
+#userStatusOptions input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+#userStatusOptions label {
+  font-size: 14px;
+  margin-right: 15px;
+  vertical-align: middle;
+}
+
+#userStatusOptions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+#messageInfo {
+  margin-top: 10px;
+}
+
+#messageInfo p {
+  margin: 5px 0;
+  font-size: 14px;
+}

@@ -76,4 +76,52 @@ export const Storage = {
 			await Storage.setCurrentConversation(null);
 		}
 	},
+	getUserStatus: async () => {
+		const result = await chrome.storage.sync.get("userStatus");
+		return result.userStatus || "Free";
+	},
+	setUserStatus: async (status) => {
+		return chrome.storage.sync.set({ userStatus: status });
+	},
+	recordMessage: async () => {
+		const now = Date.now();
+		const result = await chrome.storage.local.get("messageTimestamps");
+		let timestamps = result.messageTimestamps || [];
+		timestamps.push(now);
+	
+		// Remove timestamps older than 24 hours
+		const oneDayAgo = now - 24 * 60 * 60 * 1000;
+		timestamps = timestamps.filter((timestamp) => timestamp > oneDayAgo);
+	
+		await chrome.storage.local.set({ messageTimestamps: timestamps });
+		return timestamps; // Return the updated timestamps
+	},
+	canSendMessage: async () => {
+		const status = await Storage.getUserStatus();
+		const result = await chrome.storage.local.get("messageTimestamps");
+		const timestamps = result.messageTimestamps || [];
+
+		const messageLimit =
+			status === "Free" ? 10 : status === "Plus" ? 50 : Infinity;
+
+		return timestamps.length < messageLimit;
+	},
+
+	getMessageCount: async () => {
+		const result = await chrome.storage.local.get("messageTimestamps");
+		const timestamps = result.messageTimestamps || [];
+		const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+		return timestamps.filter((timestamp) => timestamp > oneDayAgo).length;
+	},
+
+	getLastMessageTime: async () => {
+		const result = await chrome.storage.local.get("messageTimestamps");
+		const timestamps = result.messageTimestamps || [];
+		return timestamps.length > 0 ? Math.max(...timestamps) : null;
+	},
+
+	// Clear all message timestamps (useful for testing or resetting)
+	clearMessageTimestamps: async () => {
+		return chrome.storage.local.remove("messageTimestamps");
+	},
 };

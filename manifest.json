@@ -24,8 +24,5 @@
 			"https://www.googleapis.com/auth/userinfo.profile",
 			"https://www.googleapis.com/auth/gmail.readonly"
 		]
-	},
-	"content_security_policy": {
-		"extension_pages": "script-src 'self'; object-src 'self';"
 	}
 }
