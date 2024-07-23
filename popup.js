@@ -1,39 +1,23 @@
 import { Storage } from "./storage.js";
 import { getEmailThreadIdFromPage, getEmails } from "./utils/emailUtil.js";
 import { callOpenAIAPI, callOpenAIChatAPI } from "./utils/openAiUtil.js";
-
-const extpayPro = ExtPay("inboxiq");
-
-document.getElementById("proButton").addEventListener("click", function () {
-	extpayPro.openPaymentPage();
-});
-
-extpayPro
-	.getUser()
-	.then((user) => {
-		if (user.paid) {
-			document.getElementById("freeButton").classList.remove('selected');
-			document.getElementById("proButton").classList.add('selected');
-		}
-	})
-	.catch((err) => {
-		document.querySelector("p").innerHTML =
-			"Error fetching data :( Check that your ExtensionPay id is correct and you're connected to the internet";
-	});
+import {
+	initializeSubscription,
+	updateUserStatusDisplay,
+	getUserSubscriptionStatus,
+} from "./utils/subscriptionUtil.js";
 
 document.addEventListener("DOMContentLoaded", function () {
 	initializePopup();
+	initializeSubscription();
 });
 async function updateMessageInfo() {
-	const status = await Storage.getUserStatus();
+	const status = await getUserSubscriptionStatus();
 	const messageCount = await Storage.getMessageCount();
 	let messageLimit;
 	switch (status) {
 		case "Free":
-			messageLimit = 5;
-			break;
-		case "Plus":
-			messageLimit = 50;
+			messageLimit = 10;
 			break;
 		case "Pro":
 			messageLimit = Infinity;
@@ -47,17 +31,17 @@ async function updateMessageInfo() {
 			? "Unlimited"
 			: Math.max(0, messageLimit - messageCount);
 
-	const lastMessageTime = await Storage.getLastMessageTime();
+	const lastMessageTime = await Storage.getEarliestMessageTime();
 	const refreshTime = calculateRefreshTime(lastMessageTime);
 
-	// document.getElementById(
-	// 	"messagesRemaining"
-	// ).textContent = `Messages Remaining: ${messagesRemaining}`;
-
-	// document.getElementById(
-	// 	"messageRefresh"
-	// ).textContent = `Message Refresh: ${refreshTime}`;
+	document.getElementById(
+		"messagesRemaining"
+	).textContent = `Messages Remaining: ${messagesRemaining}`;
+	document.getElementById(
+		"messageRefresh"
+	).textContent = `Message Refresh: ${refreshTime}`;
 }
+
 function calculateRefreshTime(lastMessageTime) {
 	if (!lastMessageTime) return "24hr";
 
@@ -70,35 +54,6 @@ function calculateRefreshTime(lastMessageTime) {
 
 	const hours = Math.floor(timeDiff / (1000 * 60 * 60));
 	return `${hours}hr`;
-}
-async function updateUserStatusDisplay() {
-	const userStatus = await Storage.getUserStatus();
-	const userStatusElement = document.getElementById("userStatus");
-	if (userStatusElement) {
-		userStatusElement.textContent = userStatus;
-	}
-
-	// Update the radio button
-	const selectedRadio = document.querySelector(
-		`input[name="userStatus"][value="${userStatus}"]`
-	);
-	if (selectedRadio) {
-		selectedRadio.checked = true;
-	}
-}
-
-async function updateMessageCountDisplay() {
-	const messageCount = await Storage.getMessageCount();
-	const messageCountElement = document.getElementById("messageCount");
-	if (messageCountElement) {
-		messageCountElement.textContent = `Messages sent today: ${messageCount}`;
-	}
-}
-
-async function updateUserStatus(event) {
-	const newStatus = event.target.value;
-	await Storage.setUserStatus(newStatus);
-	await updateUserStatusDisplay();
 }
 
 async function initializePopup() {
@@ -122,18 +77,8 @@ async function initializePopup() {
 
 	getUserInfo();
 	checkGmailDomain();
-	const userStatusOptions = document.querySelectorAll(
-		'input[name="userStatus"]'
-	);
-	userStatusOptions.forEach((option) => {
-		option.addEventListener("change", updateUserStatus);
-	});
 
 	await updateUserStatusDisplay();
-	await updateMessageInfo();
-
-	// Set up an interval to update the message info every minute
-	setInterval(updateMessageInfo, 1000);
 
 	function getUserInfo() {
 		chrome.identity.getAuthToken({ interactive: true }, function (token) {
@@ -444,6 +389,11 @@ async function initializePopup() {
 	}
 
 	async function summarizeEmail() {
+		//check if api key is set
+		if (!apiKeyInput.value) {
+			alert("Please enter your OpenAI API key in the settings.");
+			return;
+		}
 		if (await Storage.canSendMessage()) {
 			const [tab] = await chrome.tabs.query({
 				active: true,
@@ -504,6 +454,19 @@ async function initializePopup() {
 			} else {
 				alert("Please open an email in Gmail to start a new conversation.");
 			}
+		} else {
+			//get time remaining on message refresh
+			const lastMessageTime = await Storage.getEarliestMessageTime();
+			const refreshTime = calculateRefreshTime(lastMessageTime);
+			if (refreshTime === "1hr") {
+				alert(
+					`You have reached the message limit. It will refresh in ${refreshTime}, or you can upgrade to Pro for less than a cup of coffee ($5 USD).`
+				);
+			} else {
+				alert(
+					`You have reached the message limit. It will refresh in ${refreshTime}s, or you can upgrade to Pro for less than a cup of coffee ($5 USD).`
+				);
+			}
 		}
 	}
 
@@ -524,6 +487,11 @@ async function initializePopup() {
 	}
 
 	async function sendMessage() {
+		//check if api key is set
+		if (!apiKeyInput.value) {
+			alert("Please enter your OpenAI API key in the settings.");
+			return;
+		}
 		const userMessage = userInput.value.trim();
 		if (userMessage) {
 			if (await Storage.canSendMessage()) {
@@ -572,7 +540,7 @@ async function initializePopup() {
 				}
 			} else {
 				//get time remaining on message refresh
-				const lastMessageTime = await Storage.getLastMessageTime();
+				const lastMessageTime = await Storage.getEarliestMessageTime();
 				const refreshTime = calculateRefreshTime(lastMessageTime);
 				if (refreshTime === "1hr") {
 					alert(
@@ -597,6 +565,10 @@ async function initializePopup() {
 	});
 
 	settingsButton.addEventListener("click", function () {
+		//set user status
+		updateUserStatusDisplay();
+		updateMessageInfo();
+		//reset message timers for testing
 		settingsPanel.classList.toggle("open");
 	});
 

@@ -239,6 +239,15 @@ body, html {
     box-sizing: border-box;
     overflow-y: auto;
   }
+  #settingsPanel {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+    overflow-y: auto;
+  }
+  
+  #settingsPanel::-webkit-scrollbar {
+    display: none; /* WebKit (Safari, Chrome, etc.) */
+  }
   
   .settings-panel.open {
     left: 0;
@@ -476,34 +485,96 @@ body, html {
   margin-top: 20px;
 }
 
-.plan-button {
-  background-color: #40414f;
-  border: 1px solid #565869;
-  border-radius: 5px;
-  color: #ffffff;
-  padding: 10px 20px;
+.plan-card {
+  width: 45%; /* Adjust as needed */
+  border-radius: 10px;
+  overflow: hidden;
   cursor: pointer;
-  flex: 1;
+  transition: transform 0.3s, box-shadow 0.3s;
+  background-color: #40414f; /* Set background color here */
+}
+
+.plan-card:hover {
+  transform: translateY(-5px);
+}
+
+.plan-header {
+  background-color: #40414f; /* Default color for non-selected plans */
+  color: white;
+  padding: 15px;
+  font-size: 24px;
+  font-weight: bold;
   text-align: center;
-  margin: 0 5px;
-  transition: background-color 0.3s, border-color 0.3s;
+  transition: background-color 0.3s;
 }
 
-.plan-button.selected {
-  background-color: #4285F4;
-  border-color: #4285F4;
+.plan-card.selected .plan-header {
+  background-color: #4285F4; /* Blue color for selected plan */
 }
 
-.plan-button:hover {
-  background-color: #565869;
-  border-color: #4285F4;
+.plan-content {
+  padding: 20px;
+  text-align: center;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
 }
 
-/* Adjusting the padding to remove horizontal scrolling issues */
-.plan-button:first-child {
+.price {
+  margin: 0 0 15px 0;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+}
+
+.amount {
+  font-size: 28px;
+  font-weight: bold;
+  color: white;
+}
+
+.period {
+  font-size: 16px;
+  color: #a0a0a0;
+  margin-left: 5px;
+}
+
+.feature {
+  font-size: 14px;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* Adjusting the margin to remove horizontal scrolling issues */
+.plan-card:first-child {
   margin-left: 0;
 }
 
-.plan-button:last-child {
+.plan-card:last-child {
   margin-right: 0;
+}
+
+.user-status-bold {
+  font-weight: bold;
+}
+
+.usage-info {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid #565869;
+}
+
+.usage-info h3 {
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.usage-details {
+  background-color: #40414f;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.usage-details p {
+  margin: 5px 0;
+  color: #ffffff;
 }

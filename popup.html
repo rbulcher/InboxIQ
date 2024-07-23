@@ -112,22 +112,6 @@
 			</div>
 			<div class="setting-item">
 				<label
-					for="emailRefreshRate"
-					title="Set how often the extension checks for unread emails"
-				>
-					Unread Refresh Rate:
-				</label>
-				<select
-					id="emailRefreshRate"
-					title="Choose how frequently the extension should check for new unread emails"
-				>
-					<option value="30">30 seconds</option>
-					<option value="60">1 minute</option>
-					<option value="300">5 minutes</option>
-				</select>
-			</div>
-			<div class="setting-item">
-				<label
 					for="emailUnreadCount"
 					title="Enable or disable the display of unread email count"
 					>Email Unread Count:</label
@@ -162,10 +146,37 @@
 				</select>
 			</div>
 			<div class="setting-item payment-plans">
-				<h3>Get more messages</h3>
+				<h3>
+					Your Status: <span id="userStatus" class="user-status-bold"></span>
+				</h3>
 				<div class="plan-options">
-					<button id="freeButton" class="plan-button selected">Free</button>
-					<button id="proButton" class="plan-button">Pro</button>
+					<div id="freeButton" class="plan-card">
+						<div class="plan-header">Free</div>
+						<div class="plan-content">
+							<p class="price">
+								<span class="amount">$0</span>
+								<span class="period">/ Month</span>
+							</p>
+							<p class="feature">15 messages per day</p>
+						</div>
+					</div>
+					<div id="proButton" class="plan-card">
+						<div class="plan-header">Pro</div>
+						<div class="plan-content">
+							<p class="price">
+								<span class="amount">$5</span>
+								<span class="period">/ Month</span>
+							</p>
+							<p class="feature">Unlimited messages per day</p>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="setting-item usage-info">
+				<h3>Usage Information</h3>
+				<div class="usage-details">
+					<p id="messagesRemaining">Messages Remaining: Loading...</p>
+					<p id="messageRefresh">Message Refresh: Loading...</p>
 				</div>
 			</div>
 		</div>
