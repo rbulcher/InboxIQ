@@ -14,19 +14,28 @@ import {
 document.addEventListener("DOMContentLoaded", function () {
 	initializePopup();
 	initializeSubscription();
-	setupPeriodicCheck();
-});
-function setupPeriodicCheck() {
-	chrome.alarms.create("checkEmails", { periodInMinutes: 0.5 });
-	chrome.alarms.onAlarm.addListener((alarm) => {
-		if (alarm.name === "checkEmails") {
-			chrome.storage.sync.get(["emailUnreadCount"], function (result) {
-				if (result.emailUnreadCount) {
-					updateBadge(true);
-				}
-			});
+	chrome.storage.sync.get(["emailUnreadCount"], function (result) {
+		if (result.emailUnreadCount) {
+			updateBadge(true);
 		}
 	});
+});
+
+async function updateBadge(isEnabled) {
+	if (isEnabled) {
+		try {
+			const unreadCount = await getNumberOfUnreadEmails();
+			const badgeText = unreadCount > 99 ? "99+" : unreadCount.toString();
+			chrome.action.setBadgeText({ text: badgeText });
+			chrome.action.setBadgeBackgroundColor({ color: "#73a6fa" });
+		} catch (error) {
+			console.error("Error fetching unread count:", error);
+			chrome.action.setBadgeText({ text: "!" });
+			chrome.action.setBadgeBackgroundColor({ color: "#ff0000" });
+		}
+	} else {
+		chrome.action.setBadgeText({ text: "" });
+	}
 }
 async function updateMessageInfo() {
 	const status = await getUserSubscriptionStatus();
@@ -144,23 +153,6 @@ async function initializePopup() {
 		}
 	}
 
-	async function updateBadge(isEnabled) {
-		if (isEnabled) {
-			try {
-				const unreadCount = await getNumberOfUnreadEmails();
-				const badgeText = unreadCount > 99 ? "99+" : unreadCount.toString();
-				chrome.action.setBadgeText({ text: badgeText });
-				chrome.action.setBadgeBackgroundColor({ color: "#73a6fa" });
-			} catch (error) {
-				console.error("Error fetching unread count:", error);
-				chrome.action.setBadgeText({ text: "!" });
-				chrome.action.setBadgeBackgroundColor({ color: "#ff0000" });
-			}
-		} else {
-			chrome.action.setBadgeText({ text: "" });
-		}
-	}
-
 	// Load saved Email Unread Count setting
 	chrome.storage.sync.get(["emailUnreadCount"], function (result) {
 		if (result.emailUnreadCount !== undefined) {
@@ -214,34 +206,6 @@ async function initializePopup() {
 		} catch (error) {
 			console.error("Error checking if conversation exists:", error);
 			return false;
-		}
-	}
-
-	async function initializeChat() {
-		const [tab] = await chrome.tabs.query({
-			active: true,
-			currentWindow: true,
-		});
-		const isGmailDomain = tab.url.startsWith("https://mail.google.com");
-
-		const hasOpenEmail =
-			/#inbox\/[^/]+/.test(tab.url) ||
-			/#imp\/[^/]+/.test(tab.url) ||
-			/#starred\/[^/]+/.test(tab.url) ||
-			/#spam\/[^/]+/.test(tab.url) ||
-			/#search\/[^/]+\/[^/]+/.test(tab.url);
-
-		if (isGmailDomain && hasOpenEmail) {
-			const hasConversation = await conversationExists();
-			if (hasConversation) {
-				const conversation = await Storage.getCurrentConversation();
-				displayConversation(conversation);
-				showChatInput();
-			} else {
-				showSummarizeButton();
-			}
-		} else {
-			showExistingConversations();
 		}
 	}
 
