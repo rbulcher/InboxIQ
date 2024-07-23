@@ -414,6 +414,7 @@ async function initializePopup() {
 							}
 
 							conversation = await Storage.createConversation(
+								emailData.content,
 								summary,
 								emailData.subject,
 								threadId

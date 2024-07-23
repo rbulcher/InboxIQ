@@ -17,7 +17,7 @@ export const Storage = {
 	},
 
 	// Create a new conversation
-	createConversation: async (summary, subject, threadId) => {
+	createConversation: async (emailData, summary, subject, threadId) => {
 		const [tab] = await chrome.tabs.query({
 			active: true,
 			currentWindow: true,
@@ -25,7 +25,8 @@ export const Storage = {
 		const conversation = {
 			id: String(threadId),
 			subject: subject, // Add this line
-			messages: [{ role: "system", content: "Email summary: " + summary }],
+			//messages: [{ role: "system", content: "Email summary: " + summary }],
+			messages: [{ role: "user", content: emailData }, { role: "system", content: "Email summary: " + summary }],
 		};
 		await Storage.updateConversation(conversation);
 		return conversation;

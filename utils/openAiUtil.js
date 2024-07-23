@@ -18,11 +18,6 @@ export async function callOpenAIAPI(content) {
 				},
 				{ role: "user", content: content },
 			],
-			temperature: 1,
-			max_tokens: 256,
-			top_p: 1,
-			frequency_penalty: 0,
-			presence_penalty: 0,
 			stream: true,
 		}),
 	});
@@ -74,11 +69,6 @@ export async function callOpenAIChatAPI(messages) {
 		body: JSON.stringify({
 			model: "gpt-4o-mini",
 			messages: messages,
-			temperature: 1,
-			max_tokens: 256,
-			top_p: 1,
-			frequency_penalty: 0,
-			presence_penalty: 0,
 			stream: true,
 		}),
 	});

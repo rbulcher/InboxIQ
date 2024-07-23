@@ -64,14 +64,14 @@ export async function getEmails(threadId) {
 			""
 		);
 
+		//replace any line that starts with > with empty string
+		cleaned = cleaned.replace(/^>.*/gm, "");
+
 		const endMarkers = [
 			"best,",
 			"sincerely,",
 			"regards,",
-			"thanks,",
-			"thank you,",
 			"cheers,",
-			"wrote:",
 			"join by phone",
 			"privacy statement",
 			"privacy and cookie policy",
