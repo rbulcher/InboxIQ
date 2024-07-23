@@ -16,7 +16,7 @@
 			"js": ["content.js", "lib/highlight.min.js", "lib/marked.min.js"]
 		}
 	],
-	"permissions": ["identity", "storage", "tabs"],
+	"permissions": ["identity", "storage", "tabs", "alarms"],
 	"oauth2": {
 		"client_id": "42574466945-ou33f2nmhtk33ldtmpk4dbn0dpm4vv2g.apps.googleusercontent.com",
 		"scopes": [

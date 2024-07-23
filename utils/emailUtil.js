@@ -16,6 +16,38 @@ export async function getEmailThreadIdFromPage() {
 	}
 }
 
+export async function getNumberOfUnreadEmails() {
+	return new Promise((resolve, reject) => {
+		chrome.identity.getAuthToken({ interactive: true }, async function (token) {
+			if (chrome.runtime.lastError) {
+				reject(chrome.runtime.lastError);
+				return;
+			}
+
+			try {
+				const response = await fetch(
+					"https://gmail.googleapis.com/gmail/v1/users/me/messages?q=is:unread%20in:Inbox",
+					{
+						headers: {
+							Authorization: `Bearer ${token}`,
+							Accept: "application/json",
+						},
+					}
+				);
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+
+				const data = await response.json();
+				resolve(data.resultSizeEstimate);
+			} catch (error) {
+				reject(error);
+			}
+		});
+	});
+}
+
 export async function getEmails(threadId) {
 	function decodeBase64(base64Url) {
 		const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");

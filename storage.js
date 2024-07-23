@@ -1,7 +1,4 @@
-function getEmailThreadIdFromUrl(url) {
-	const match = url.match(/#inbox\/([^/]+)/);
-	return match ? match[1] : Date.now().toString();
-}
+import { getUserSubscriptionStatus } from "./utils/subscriptionUtil.js";
 
 export const Storage = {
 	// Get all conversations
@@ -77,8 +74,8 @@ export const Storage = {
 		}
 	},
 	getUserStatus: async () => {
-		const result = await chrome.storage.sync.get("userStatus");
-		return result.userStatus || "Free";
+		const userStatus = getUserSubscriptionStatus();
+		return userStatus;
 	},
 	setUserStatus: async (status) => {
 		return chrome.storage.sync.set({ userStatus: status });

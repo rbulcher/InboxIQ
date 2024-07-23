@@ -1,5 +1,9 @@
 import { Storage } from "./storage.js";
-import { getEmailThreadIdFromPage, getEmails } from "./utils/emailUtil.js";
+import {
+	getEmailThreadIdFromPage,
+	getEmails,
+	getNumberOfUnreadEmails,
+} from "./utils/emailUtil.js";
 import { callOpenAIAPI, callOpenAIChatAPI } from "./utils/openAiUtil.js";
 import {
 	initializeSubscription,
@@ -10,7 +14,20 @@ import {
 document.addEventListener("DOMContentLoaded", function () {
 	initializePopup();
 	initializeSubscription();
+	setupPeriodicCheck();
 });
+function setupPeriodicCheck() {
+	chrome.alarms.create("checkEmails", { periodInMinutes: 0.5 });
+	chrome.alarms.onAlarm.addListener((alarm) => {
+		if (alarm.name === "checkEmails") {
+			chrome.storage.sync.get(["emailUnreadCount"], function (result) {
+				if (result.emailUnreadCount) {
+					updateBadge(true);
+				}
+			});
+		}
+	});
+}
 async function updateMessageInfo() {
 	const status = await getUserSubscriptionStatus();
 	const messageCount = await Storage.getMessageCount();
@@ -127,11 +144,18 @@ async function initializePopup() {
 		}
 	}
 
-	function updateBadge(isEnabled) {
+	async function updateBadge(isEnabled) {
 		if (isEnabled) {
-			// For now, we're setting a static "9+" as the badge text
-			chrome.action.setBadgeText({ text: "9+" });
-			chrome.action.setBadgeBackgroundColor({ color: "#73a6fa" });
+			try {
+				const unreadCount = await getNumberOfUnreadEmails();
+				const badgeText = unreadCount > 99 ? "99+" : unreadCount.toString();
+				chrome.action.setBadgeText({ text: badgeText });
+				chrome.action.setBadgeBackgroundColor({ color: "#73a6fa" });
+			} catch (error) {
+				console.error("Error fetching unread count:", error);
+				chrome.action.setBadgeText({ text: "!" });
+				chrome.action.setBadgeBackgroundColor({ color: "#ff0000" });
+			}
 		} else {
 			chrome.action.setBadgeText({ text: "" });
 		}
