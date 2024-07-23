@@ -2,10 +2,28 @@ import { Storage } from "./storage.js";
 import { getEmailThreadIdFromPage, getEmails } from "./utils/emailUtil.js";
 import { callOpenAIAPI, callOpenAIChatAPI } from "./utils/openAiUtil.js";
 
+const extpayPro = ExtPay("inboxiq");
+
+document.getElementById("proButton").addEventListener("click", function () {
+	extpayPro.openPaymentPage();
+});
+
+extpayPro
+	.getUser()
+	.then((user) => {
+		if (user.paid) {
+			document.getElementById("freeButton").classList.remove('selected');
+			document.getElementById("proButton").classList.add('selected');
+		}
+	})
+	.catch((err) => {
+		document.querySelector("p").innerHTML =
+			"Error fetching data :( Check that your ExtensionPay id is correct and you're connected to the internet";
+	});
+
 document.addEventListener("DOMContentLoaded", function () {
 	initializePopup();
 });
-
 async function updateMessageInfo() {
 	const status = await Storage.getUserStatus();
 	const messageCount = await Storage.getMessageCount();
@@ -32,13 +50,13 @@ async function updateMessageInfo() {
 	const lastMessageTime = await Storage.getLastMessageTime();
 	const refreshTime = calculateRefreshTime(lastMessageTime);
 
-	document.getElementById(
-		"messagesRemaining"
-	).textContent = `Messages Remaining: ${messagesRemaining}`;
+	// document.getElementById(
+	// 	"messagesRemaining"
+	// ).textContent = `Messages Remaining: ${messagesRemaining}`;
 
-	document.getElementById(
-		"messageRefresh"
-	).textContent = `Message Refresh: ${refreshTime}`;
+	// document.getElementById(
+	// 	"messageRefresh"
+	// ).textContent = `Message Refresh: ${refreshTime}`;
 }
 function calculateRefreshTime(lastMessageTime) {
 	if (!lastMessageTime) return "24hr";
@@ -556,11 +574,11 @@ async function initializePopup() {
 				//get time remaining on message refresh
 				const lastMessageTime = await Storage.getLastMessageTime();
 				const refreshTime = calculateRefreshTime(lastMessageTime);
-				if(refreshTime === "1hr"){
+				if (refreshTime === "1hr") {
 					alert(
 						`You have reached the message limit. It will refresh in ${refreshTime}, or you can upgrade to a paid plan.`
 					);
-				}else {
+				} else {
 					alert(
 						`You have reached the message limit. It will refresh in ${refreshTime}s, or you can upgrade to a paid plan.`
 					);

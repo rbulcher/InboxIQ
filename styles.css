@@ -470,39 +470,40 @@ body, html {
 .hljs-function { color: #61afef; }
 .hljs-comment { color: #5c6370; font-style: italic; letter-spacing: -.5px; }
 
-.user-status {
-  font-weight: bold;
-  padding: 5px 10px;
-  border-radius: 5px;
-  background-color: #4285F4;
-  color: white;
-}
-
-#userStatusOptions input[type="radio"] {
-  width: 14px;
-  height: 14px;
-  margin-right: 5px;
-  vertical-align: middle;
-}
-
-#userStatusOptions label {
-  font-size: 14px;
-  margin-right: 15px;
-  vertical-align: middle;
-}
-
-#userStatusOptions {
+.plan-options {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  justify-content: space-between;
+  margin-top: 20px;
 }
 
-#messageInfo {
-  margin-top: 10px;
+.plan-button {
+  background-color: #40414f;
+  border: 1px solid #565869;
+  border-radius: 5px;
+  color: #ffffff;
+  padding: 10px 20px;
+  cursor: pointer;
+  flex: 1;
+  text-align: center;
+  margin: 0 5px;
+  transition: background-color 0.3s, border-color 0.3s;
 }
 
-#messageInfo p {
-  margin: 5px 0;
-  font-size: 14px;
+.plan-button.selected {
+  background-color: #4285F4;
+  border-color: #4285F4;
+}
+
+.plan-button:hover {
+  background-color: #565869;
+  border-color: #4285F4;
+}
+
+/* Adjusting the padding to remove horizontal scrolling issues */
+.plan-button:first-child {
+  margin-left: 0;
+}
+
+.plan-button:last-child {
+  margin-right: 0;
 }

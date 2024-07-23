@@ -161,28 +161,15 @@
 					<option value="48">48 hours</option>
 				</select>
 			</div>
-			<div class="setting-item">
-				<label for="userStatus" title="Your current subscription status"
-					>User Status:</label
-				>
-				<div id="userStatusOptions">
-					<input type="radio" id="statusFree" name="userStatus" value="Free" />
-					<label for="statusFree">Free</label>
-
-					<input type="radio" id="statusPlus" name="userStatus" value="Plus" />
-					<label for="statusPlus">Plus</label>
-
-					<input type="radio" id="statusPro" name="userStatus" value="Pro" />
-					<label for="statusPro">Pro</label>
-				</div>
-			</div>
-			<div class="setting-item">
-				<div id="messageInfo">
-					<p id="messagesRemaining">Messages Remaining: --</p>
-					<p id="messageRefresh">Message Refresh: --</p>
+			<div class="setting-item payment-plans">
+				<h3>Get more messages</h3>
+				<div class="plan-options">
+					<button id="freeButton" class="plan-button selected">Free</button>
+					<button id="proButton" class="plan-button">Pro</button>
 				</div>
 			</div>
 		</div>
+		<script src="ExtPay.js"></script>
 		<script src="popup.js" type="module"></script>
 	</body>
 </html>

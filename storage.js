@@ -88,11 +88,11 @@ export const Storage = {
 		const result = await chrome.storage.local.get("messageTimestamps");
 		let timestamps = result.messageTimestamps || [];
 		timestamps.push(now);
-	
+
 		// Remove timestamps older than 24 hours
 		const oneDayAgo = now - 24 * 60 * 60 * 1000;
 		timestamps = timestamps.filter((timestamp) => timestamp > oneDayAgo);
-	
+
 		await chrome.storage.local.set({ messageTimestamps: timestamps });
 		return timestamps; // Return the updated timestamps
 	},
