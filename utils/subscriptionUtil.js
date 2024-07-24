@@ -1,4 +1,4 @@
-const extpayPro = ExtPay("inboxiq");
+const extpayPro = ExtPay("inboxiq-pro");
 
 export function initializeSubscription() {
 	const freeButton = document.getElementById("freeButton");
@@ -38,13 +38,12 @@ export function initializeSubscription() {
 		extpayPro.openPaymentPage();
 	});
 
-    freeButton.addEventListener("click", function () {
-        extpayPro.openPaymentPage();
-    });
+	freeButton.addEventListener("click", function () {
+		extpayPro.openPaymentPage();
+	});
 
 	// Initial check of user status
 	checkAndUpdateUserStatus();
-
 }
 
 export function getUserSubscriptionStatus() {
