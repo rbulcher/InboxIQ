@@ -175,7 +175,6 @@ async function loadConversation(conversationId) {
 }
 
 async function initializePopup() {
-	await deleteExpiredConversations();
 	const mainContainer = document.getElementById("mainContainer");
 	const settingsButton = document.getElementById("settingsButton");
 	const settingsPanel = document.getElementById("settingsPanel");
@@ -199,6 +198,7 @@ async function initializePopup() {
 
 	await updateUserStatusDisplay();
 	await initializeConversationLifetime();
+	await deleteExpiredConversations();
 	await updateConversationList();
 
 	function getUserInfo() {
