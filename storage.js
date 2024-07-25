@@ -26,12 +26,43 @@ export const Storage = {
 			id: String(threadId),
 			subject: subject, // Add this line
 			//messages: [{ role: "system", content: "Email summary: " + summary }],
-			messages: [{ role: "user", content: emailData }, { role: "system", content: "Email summary: " + summary }],
+			messages: [
+				{ role: "user", content: emailData },
+				{ role: "system", content: "Email summary: " + summary },
+			],
+			createdAt: Date.now(), // Add timestamp at creation
 		};
 		await Storage.updateConversation(conversation);
 		return conversation;
 	},
+	setConversationLifetime: async (hours) => {
+		return chrome.storage.sync.set({ conversationLifetime: hours });
+	},
 
+	getConversationLifetime: async () => {
+		const result = await chrome.storage.sync.get("conversationLifetime");
+		return result.conversationLifetime || 24; // Default to 24 hours if not set
+	},
+	deleteExpiredConversations: async () => {
+		const lifetime = await Storage.getConversationLifetime();
+		//const expirationTime = Date.now() - lifetime * 60 * 60 * 1000;
+		// For testing: if lifetime is 1, treat it as 1 minute, otherwise as hours
+		const expirationTime =
+			lifetime === 1
+				? Date.now() - 60 * 1000 // 1 minute
+				: Date.now() - lifetime * 60 * 60 * 1000; // hours
+		const conversations = await Storage.getConversations();
+
+		const updatedConversations = conversations.filter(
+			(conv) => conv.createdAt > expirationTime
+		);
+
+		if (updatedConversations.length !== conversations.length) {
+			await Storage.saveConversations(updatedConversations);
+			return true; // Conversations were deleted
+		}
+		return false; // No conversations were deleted
+	},
 	// Get the current conversation
 	getCurrentConversation: async () => {
 		const result = await chrome.storage.local.get("currentConversation");

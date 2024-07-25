@@ -37,6 +37,30 @@ async function updateBadge(isEnabled) {
 		chrome.action.setBadgeText({ text: "" });
 	}
 }
+
+async function initializeConversationLifetime() {
+	const lifetimeSelect = document.getElementById("conversationLifetime");
+	const currentLifetime = await Storage.getConversationLifetime();
+
+	// Ensure a valid option is selected
+	if (lifetimeSelect.querySelector(`option[value="${currentLifetime}"]`)) {
+		lifetimeSelect.value = currentLifetime.toString();
+	} else {
+		lifetimeSelect.value = "24"; // Default to 24 hours if the stored value is not in the options
+		await Storage.setConversationLifetime(24);
+	}
+
+	lifetimeSelect.addEventListener("change", async () => {
+		const selectedLifetime = parseInt(lifetimeSelect.value);
+		await Storage.setConversationLifetime(selectedLifetime);
+		await deleteExpiredConversations();
+		updateConversationList();
+	});
+}
+
+async function deleteExpiredConversations() {
+	await Storage.deleteExpiredConversations();
+}
 async function updateMessageInfo() {
 	const status = await getUserSubscriptionStatus();
 	const messageCount = await Storage.getMessageCount();
@@ -82,7 +106,76 @@ function calculateRefreshTime(lastMessageTime) {
 	return `${hours}hr`;
 }
 
+async function handleMessageLimitError() {
+	const lastMessageTime = await Storage.getEarliestMessageTime();
+	const refreshTime = calculateRefreshTime(lastMessageTime);
+	const message =
+		refreshTime === "1hr"
+			? `You have reached the message limit. It will refresh in ${refreshTime}, or you can upgrade to Pro for less than a cup of coffee ($5 USD).`
+			: `You have reached the message limit. It will refresh in ${refreshTime}s, or you can upgrade to Pro for less than a cup of coffee ($5 USD).`;
+	alert(message);
+}
+
+async function updateConversationList() {
+	const conversationList = document.getElementById("conversationList");
+	conversationList.innerHTML = "";
+
+	const conversations = await Storage.getConversations();
+	const currentConversation = await Storage.getCurrentConversation();
+
+	conversations.forEach((conv) => {
+		const item = document.createElement("div");
+		item.className = "conversation-item";
+		if (currentConversation && conv.id === currentConversation.id) {
+			item.classList.add("active");
+		}
+
+		const titleSpan = document.createElement("span");
+		titleSpan.className = "conversation-title";
+		const title = conv.subject
+			? conv.subject.split(" ").slice(0, 3).join(" ") + "..."
+			: `Conversation - ${String(conv.id).slice(-4)}`;
+		titleSpan.textContent = title;
+		item.appendChild(titleSpan);
+
+		const deleteButton = document.createElement("button");
+		deleteButton.className = "delete-button";
+		deleteButton.innerHTML = "&#x2715;";
+		deleteButton.addEventListener("click", (e) => {
+			e.stopPropagation();
+			deleteConversation(conv.id);
+		});
+		item.appendChild(deleteButton);
+
+		item.addEventListener("click", () => loadConversation(conv.id));
+		conversationList.appendChild(item);
+	});
+}
+
+async function deleteConversation(id) {
+	if (confirm("Are you sure you want to delete this conversation?")) {
+		await Storage.deleteConversation(id);
+		updateConversationList();
+		const currentConv = await Storage.getCurrentConversation();
+		if (!currentConv || currentConv.id === id) {
+			chatWindow.innerHTML = "";
+			showSummarizeButton();
+		}
+	}
+}
+
+async function loadConversation(conversationId) {
+	const conversation = await Storage.getConversationById(conversationId);
+	if (conversation) {
+		await Storage.setCurrentConversation(conversation);
+		displayConversation(conversation);
+		showChatInput();
+		updateConversationList();
+	}
+}
+
 async function initializePopup() {
+	await deleteExpiredConversations();
 	const mainContainer = document.getElementById("mainContainer");
 	const settingsButton = document.getElementById("settingsButton");
 	const settingsPanel = document.getElementById("settingsPanel");
@@ -105,6 +198,8 @@ async function initializePopup() {
 	checkGmailDomain();
 
 	await updateUserStatusDisplay();
+	await initializeConversationLifetime();
+	await updateConversationList();
 
 	function getUserInfo() {
 		chrome.identity.getAuthToken({ interactive: true }, function (token) {
@@ -194,21 +289,6 @@ async function initializePopup() {
 			event.stopPropagation();
 		});
 
-	async function conversationExists() {
-		try {
-			const response = await getEmailThreadIdFromPage();
-			if (response && response.threadId) {
-				const threadId = response.threadId;
-				const conversations = await Storage.getConversations();
-				return conversations.some((conv) => conv.id === threadId);
-			}
-			return false;
-		} catch (error) {
-			console.error("Error checking if conversation exists:", error);
-			return false;
-		}
-	}
-
 	function showSummarizeButton() {
 		summarizeButton.style.display = "block";
 		chatInputArea.style.display = "none";
@@ -283,74 +363,6 @@ async function initializePopup() {
 			gmailPopup.style.display = "block";
 		}
 		updateConversationList();
-	}
-
-	function showExistingConversations() {
-		Storage.getConversations().then((conversations) => {
-			if (conversations.length > 0) {
-				chatWindow.innerHTML =
-					'<div class="ai-message">Select a conversation from the sidebar to view its contents.</div>';
-				showChatInput();
-			}
-		});
-	}
-
-	async function updateConversationList() {
-		const conversationList = document.getElementById("conversationList");
-		conversationList.innerHTML = "";
-
-		const conversations = await Storage.getConversations();
-		const currentConversation = await Storage.getCurrentConversation();
-
-		conversations.forEach((conv) => {
-			const item = document.createElement("div");
-			item.className = "conversation-item";
-			if (currentConversation && conv.id === currentConversation.id) {
-				item.classList.add("active");
-			}
-
-			const titleSpan = document.createElement("span");
-			titleSpan.className = "conversation-title";
-			const title = conv.subject
-				? conv.subject.split(" ").slice(0, 3).join(" ") + "..."
-				: `Conversation - ${String(conv.id).slice(-4)}`;
-			titleSpan.textContent = title;
-			item.appendChild(titleSpan);
-
-			const deleteButton = document.createElement("button");
-			deleteButton.className = "delete-button";
-			deleteButton.innerHTML = "&#x2715;";
-			deleteButton.addEventListener("click", (e) => {
-				e.stopPropagation();
-				deleteConversation(conv.id);
-			});
-			item.appendChild(deleteButton);
-
-			item.addEventListener("click", () => loadConversation(conv.id));
-			conversationList.appendChild(item);
-		});
-	}
-
-	async function deleteConversation(id) {
-		if (confirm("Are you sure you want to delete this conversation?")) {
-			await Storage.deleteConversation(id);
-			updateConversationList();
-			const currentConv = await Storage.getCurrentConversation();
-			if (!currentConv || currentConv.id === id) {
-				chatWindow.innerHTML = "";
-				showSummarizeButton();
-			}
-		}
-	}
-
-	async function loadConversation(conversationId) {
-		const conversation = await Storage.getConversationById(conversationId);
-		if (conversation) {
-			await Storage.setCurrentConversation(conversation);
-			displayConversation(conversation);
-			showChatInput();
-			updateConversationList();
-		}
 	}
 
 	function displayConversation(conversation) {
@@ -445,18 +457,7 @@ async function initializePopup() {
 				alert("Please open an email in Gmail to start a new conversation.");
 			}
 		} else {
-			//get time remaining on message refresh
-			const lastMessageTime = await Storage.getEarliestMessageTime();
-			const refreshTime = calculateRefreshTime(lastMessageTime);
-			if (refreshTime === "1hr") {
-				alert(
-					`You have reached the message limit. It will refresh in ${refreshTime}, or you can upgrade to Pro for less than a cup of coffee ($5 USD).`
-				);
-			} else {
-				alert(
-					`You have reached the message limit. It will refresh in ${refreshTime}s, or you can upgrade to Pro for less than a cup of coffee ($5 USD).`
-				);
-			}
+			handleMessageLimitError();
 		}
 	}
 
@@ -529,18 +530,7 @@ async function initializePopup() {
 					alert("Error getting AI response. Please try again.");
 				}
 			} else {
-				//get time remaining on message refresh
-				const lastMessageTime = await Storage.getEarliestMessageTime();
-				const refreshTime = calculateRefreshTime(lastMessageTime);
-				if (refreshTime === "1hr") {
-					alert(
-						`You have reached the message limit. It will refresh in ${refreshTime}, or you can upgrade to a paid plan.`
-					);
-				} else {
-					alert(
-						`You have reached the message limit. It will refresh in ${refreshTime}s, or you can upgrade to a paid plan.`
-					);
-				}
+				handleMessageLimitError();
 			}
 		}
 	}
