@@ -114,6 +114,7 @@ async function handleMessageLimitError() {
 			? `You have reached the message limit. It will refresh in ${refreshTime}, or you can upgrade to Pro for less than a cup of coffee ($5 USD).`
 			: `You have reached the message limit. It will refresh in ${refreshTime}s, or you can upgrade to Pro for less than a cup of coffee ($5 USD).`;
 	alert(message);
+	settingsPanel.classList.toggle("open");
 }
 
 async function updateConversationList() {
@@ -199,7 +200,6 @@ async function initializePopup() {
 	await updateUserStatusDisplay();
 	await initializeConversationLifetime();
 	await deleteExpiredConversations();
-	await updateConversationList();
 
 	function getUserInfo() {
 		chrome.identity.getAuthToken({ interactive: true }, function (token) {
@@ -450,8 +450,11 @@ async function initializePopup() {
 						throw new Error("No thread ID received");
 					}
 				} catch (error) {
-					console.error("Error processing email:", error);
-					alert("Error processing email. Please try again.");
+					if (error.message === "HTTP error! status: 429") {
+						alert(
+							"API rate limit exceeded. Please visit openai and view your api key usage."
+						);
+					}
 				}
 			} else {
 				alert("Please open an email in Gmail to start a new conversation.");
