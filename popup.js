@@ -175,6 +175,51 @@ async function loadConversation(conversationId) {
 	}
 }
 
+function formatAIResponse(response) {
+	// Convert markdown to HTML
+	let formattedResponse = marked.parse(response);
+
+	// Wrap the response in a div to apply highlighting
+	let tempDiv = document.createElement("div");
+	tempDiv.innerHTML = formattedResponse;
+
+	// Apply syntax highlighting
+	tempDiv.querySelectorAll("pre code").forEach((block) => {
+		hljs.highlightBlock(block);
+	});
+
+	return tempDiv.innerHTML;
+}
+
+function displayConversation(conversation) {
+	chatWindow.innerHTML = "";
+
+	// slice(1) is to ignore the prompt message
+	conversation.messages.slice(1).forEach((message) => {
+		if (message.role !== "system") {
+			const messageElement = document.createElement("div");
+			messageElement.className = `message ${
+				message.role === "assistant" ? "ai-message" : "user-message"
+			}`;
+
+			if (message.role === "assistant") {
+				messageElement.innerHTML = formatAIResponse(message.content);
+			} else {
+				messageElement.textContent = message.content;
+			}
+
+			chatWindow.appendChild(messageElement);
+		}
+	});
+
+	chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function showChatInput() {
+	summarizeButton.style.display = "none";
+	chatInputArea.style.display = "flex";
+}
+
 async function initializePopup() {
 	const mainContainer = document.getElementById("mainContainer");
 	const settingsButton = document.getElementById("settingsButton");
@@ -294,11 +339,6 @@ async function initializePopup() {
 		chatInputArea.style.display = "none";
 	}
 
-	function showChatInput() {
-		summarizeButton.style.display = "none";
-		chatInputArea.style.display = "flex";
-	}
-
 	async function checkGmailDomain() {
 		const [tab] = await chrome.tabs.query({
 			active: true,
@@ -363,30 +403,6 @@ async function initializePopup() {
 			gmailPopup.style.display = "block";
 		}
 		updateConversationList();
-	}
-
-	function displayConversation(conversation) {
-		chatWindow.innerHTML = "";
-
-		// slice(1) is to ignore the prompt message
-		conversation.messages.slice(1).forEach((message) => {
-			if (message.role !== "system") {
-				const messageElement = document.createElement("div");
-				messageElement.className = `message ${
-					message.role === "assistant" ? "ai-message" : "user-message"
-				}`;
-
-				if (message.role === "assistant") {
-					messageElement.innerHTML = formatAIResponse(message.content);
-				} else {
-					messageElement.textContent = message.content;
-				}
-
-				chatWindow.appendChild(messageElement);
-			}
-		});
-
-		chatWindow.scrollTop = chatWindow.scrollHeight;
 	}
 
 	async function summarizeEmail() {
@@ -462,22 +478,6 @@ async function initializePopup() {
 		} else {
 			handleMessageLimitError();
 		}
-	}
-
-	function formatAIResponse(response) {
-		// Convert markdown to HTML
-		let formattedResponse = marked.parse(response);
-
-		// Wrap the response in a div to apply highlighting
-		let tempDiv = document.createElement("div");
-		tempDiv.innerHTML = formattedResponse;
-
-		// Apply syntax highlighting
-		tempDiv.querySelectorAll("pre code").forEach((block) => {
-			hljs.highlightBlock(block);
-		});
-
-		return tempDiv.innerHTML;
 	}
 
 	async function sendMessage() {
