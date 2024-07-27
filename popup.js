@@ -93,17 +93,20 @@ async function updateMessageInfo() {
 }
 
 function calculateRefreshTime(lastMessageTime) {
-	if (!lastMessageTime) return "24hr";
+	if (!lastMessageTime) return "24hrs 0min";
 
 	const now = Date.now();
 	const refreshDate = new Date(lastMessageTime);
 	refreshDate.setHours(refreshDate.getHours() + 24);
 
 	const timeDiff = refreshDate - now;
-	if (timeDiff <= 0) return "0hr";
+	if (timeDiff <= 0) return "0hr 0min";
 
 	const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-	return `${hours}hr`;
+	const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+
+	const hourLabel = hours === 1 ? "hr" : "hrs";
+	return `${hours}${hourLabel} ${minutes}min`;
 }
 
 async function handleMessageLimitError() {

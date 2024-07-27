@@ -47,7 +47,7 @@ export const Storage = {
 		const lifetime = await Storage.getConversationLifetime();
 		//const expirationTime = Date.now() - lifetime * 60 * 60 * 1000;
 		// For testing: if lifetime is 1, treat it as 1 minute, otherwise as hours
-		const expirationTime =
+		const expirationTime = 
 			lifetime === 1
 				? Date.now() - 60 * 1000 // 1 minute
 				: Date.now() - lifetime * 60 * 60 * 1000; // hours
