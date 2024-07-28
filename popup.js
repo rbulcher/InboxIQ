@@ -21,6 +21,28 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 });
 
+function applyMessageColors() {
+	const userMessages = document.querySelectorAll(".user-message");
+	const totalMessages = userMessages.length;
+
+	userMessages.forEach((message, index) => {
+		const progress = index / (totalMessages - 1);
+		const color = getGradientColor(progress);
+		message.style.backgroundColor = color;
+	});
+}
+
+function getGradientColor(progress) {
+	const start = [110, 0, 255]; // RGB for #6E00FF (Dark purple)
+	const end = [255, 55, 223]; // RGB for #ff37df (Pink)
+
+	const r = Math.round(start[0] * (1 - progress) + end[0] * progress);
+	const g = Math.round(start[1] * (1 - progress) + end[1] * progress);
+	const b = Math.round(start[2] * (1 - progress) + end[2] * progress);
+
+	return `rgb(${r}, ${g}, ${b})`;
+}
+
 async function updateBadge(isEnabled) {
 	if (isEnabled) {
 		try {
@@ -197,7 +219,6 @@ function formatAIResponse(response) {
 function displayConversation(conversation) {
 	chatWindow.innerHTML = "";
 
-	// slice(1) is to ignore the prompt message
 	conversation.messages.slice(1).forEach((message) => {
 		if (message.role !== "system") {
 			const messageElement = document.createElement("div");
@@ -216,6 +237,9 @@ function displayConversation(conversation) {
 	});
 
 	chatWindow.scrollTop = chatWindow.scrollHeight;
+
+	// Apply gradient colors to user messages
+	applyMessageColors();
 }
 
 function showChatInput() {
