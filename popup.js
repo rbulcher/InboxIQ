@@ -22,10 +22,10 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function applyMessageColors() {
-	const userMessages = document.querySelectorAll(".user-message");
-	const totalMessages = userMessages.length;
+	const messages = document.querySelectorAll(".message");
+	const totalMessages = messages.length;
 
-	userMessages.forEach((message, index) => {
+	messages.forEach((message, index) => {
 		const progress = index / (totalMessages - 1);
 		const color = getGradientColor(progress);
 		message.style.backgroundColor = color;
@@ -49,7 +49,7 @@ async function updateBadge(isEnabled) {
 			const unreadCount = await getNumberOfUnreadEmails();
 			const badgeText = unreadCount > 99 ? "99+" : unreadCount.toString();
 			chrome.action.setBadgeText({ text: badgeText });
-			chrome.action.setBadgeBackgroundColor({ color: "#73a6fa" });
+			chrome.action.setBadgeBackgroundColor({ color: "#b137df" });
 		} catch (error) {
 			console.error("Error fetching unread count:", error);
 			chrome.action.setBadgeText({ text: "!" });
@@ -219,6 +219,7 @@ function formatAIResponse(response) {
 function displayConversation(conversation) {
 	chatWindow.innerHTML = "";
 
+	// slice(1) is to ignore the prompt message
 	conversation.messages.slice(1).forEach((message) => {
 		if (message.role !== "system") {
 			const messageElement = document.createElement("div");
@@ -237,9 +238,6 @@ function displayConversation(conversation) {
 	});
 
 	chatWindow.scrollTop = chatWindow.scrollHeight;
-
-	// Apply gradient colors to user messages
-	applyMessageColors();
 }
 
 function showChatInput() {

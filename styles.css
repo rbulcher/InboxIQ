@@ -84,34 +84,44 @@ body, html {
   display: none; /* WebKit (Safari, Chrome, etc.) */
 }
 
-.message {
-  max-width: 80%;
-  padding: 10px 15px;
-  margin-bottom: 10px;
-  border-radius: 15px;
-  font-size: 14px;
-  word-wrap: break-word;
-  line-height: 1.4;
-}
-
-.user-message {
-  align-self: flex-end;
-  margin-left: 20%;
-  color: white; /* Ensure text is visible on colored backgrounds */
-}
-
-.ai-message {
-  align-self: flex-start;
-  margin-right: 20%;
-  max-width: 80%;
-  background-color: var(--ai-message-bg);
-  color: white;
+  .message {
+    max-width: 80%;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 15px;
+    font-size: 14px;
+    word-wrap: break-word;
+    line-height: 1.4;
+  }
+  
+  
+  .user-message {
+    background-color: #007AFF ;
+    color: white;
+    align-self: flex-end;
+    margin-left: 20%;
+  }
+  
+  .ai-message {
+    background-color: #40414f;
+    color: white;
+    align-self: flex-start;
+    margin-right: 20%;
+    max-width: 80%;
+  }
+  
+  .input-area {
+    padding: 10px 20px; /* Reduced padding to give more space for input growth */
+    background-color: #40414f;
+    display: flex;
+    align-items: flex-end; /* Align items to the bottom */
+    width: 100%;
 }
 
 .conversation-item.active {
     /* background-color: #4285F4; */
     color: white;
-    border: 2px solid #4285F4;
+    border: 2px solid #007AFF ;
 }
 
 #userInput {
@@ -556,6 +566,5 @@ body, html {
 
 :root {
   --gradient-start: #6E00FF; /* Dark purple */
-  --gradient-end: #c531ac;   /* Pink */
-  --ai-message-bg: #40414f;  /* Original dark gray for AI messages */
+  --gradient-end: #ff37df;   /* Pink */
 }
