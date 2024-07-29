@@ -568,3 +568,86 @@ body, html {
   --gradient-start: #6E00FF; /* Dark purple */
   --gradient-end: #ff37df;   /* Pink */
 }
+
+.api-key-help {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 5px;
+}
+
+.api-key-help svg {
+  width: 16px;
+  height: 16px;
+  color: #ffffff;
+}
+
+.setting-label-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  position: relative;
+}
+
+.setting-label-container label {
+  margin-right: 5px;
+}
+
+.api-key-help {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  margin-bottom: 5px;
+}
+
+.api-key-help svg {
+  width: 20px;
+  height: 20px;
+  color: #ffffff;
+  
+}
+
+/* Custom tooltip styles */
+.api-key-help::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;  /* Changed from top: 100% to bottom: 100% */
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  background-color: #333;
+  color: #fff;
+  font-size: 14px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  margin-bottom: 8px;  /* Added margin to create some space between tooltip and icon */
+}
+
+/* Optional: Add a small arrow at the bottom of the tooltip */
+.api-key-help::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+.api-key-help:hover::before,
+.api-key-help:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
