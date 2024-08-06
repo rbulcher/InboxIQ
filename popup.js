@@ -109,9 +109,11 @@ async function updateMessageInfo() {
 	document.getElementById(
 		"messagesRemaining"
 	).textContent = `Messages Remaining: ${messagesRemaining}`;
-	document.getElementById(
-		"messageRefresh"
-	).textContent = `Message Refresh: ${refreshTime}`;
+
+	document.getElementById("messageRefresh").textContent =
+		status === "Free"
+			? `Message Refresh: ${refreshTime}`
+			: "Message Refresh: Infinite";
 }
 
 function calculateRefreshTime(lastMessageTime) {
