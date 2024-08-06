@@ -122,7 +122,7 @@ function calculateRefreshTime(lastMessageTime) {
 	refreshDate.setHours(refreshDate.getHours() + 24);
 
 	const timeDiff = refreshDate - now;
-	if (timeDiff <= 0) return "0hr 0min";
+	if (timeDiff <= 0) return "24hrs 0min";
 
 	const hours = Math.floor(timeDiff / (1000 * 60 * 60));
 	const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
