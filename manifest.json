@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "InboxIQ",
-	"version": "1.7",
+	"version": "2.0",
 	"description": "A Gmail assistant and summarizer.",
 	"action": {
 		"default_popup": "popup.html"
