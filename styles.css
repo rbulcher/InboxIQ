@@ -86,31 +86,34 @@ body, html {
   display: none; /* WebKit (Safari, Chrome, etc.) */
 }
 
-  .message {
-    max-width: 80%;
-    padding: 10px 15px;
-    margin-bottom: 10px;
-    border-radius: 15px;
-    font-size: 14px;
-    word-wrap: break-word;
-    line-height: 1.4;
-  }
+.message {
+  max-width: 80%;
+  padding: 12px 18px;
+  margin-bottom: 12px;
+  border-radius: 15px;
+  font-size: 16px;
+  word-wrap: break-word;
+  line-height: 1.4;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  letter-spacing: 0.2px;
+}
   
   
-  .user-message {
-    background-color: #007AFF ;
-    color: white;
-    align-self: flex-end;
-    margin-left: 20%;
-  }
-  
-  .ai-message {
-    background-color: #40414f;
-    color: white;
-    align-self: flex-start;
-    margin-right: 20%;
-    max-width: 80%;
-  }
+.user-message {
+  background-color: #007AFF;
+  color: white;
+  align-self: flex-end;
+  margin-left: 20%;
+  max-width: 85%;
+}
+
+.ai-message {
+  background-color: #40414f;
+  color: white;
+  align-self: flex-start;
+  margin-right: 20%;
+  max-width: 85%;
+}
   
   .input-area {
     padding: 10px 20px;

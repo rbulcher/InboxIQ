@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "InboxIQ",
-	"version": "1.6",
+	"version": "1.7",
 	"description": "A Gmail assistant and summarizer.",
 	"action": {
 		"default_popup": "popup.html"
@@ -35,7 +35,7 @@
 	],
 	"permissions": ["identity", "storage", "tabs"],
 	"oauth2": {
-		"client_id": "42574466945-ou33f2nmhtk33ldtmpk4dbn0dpm4vv2g.apps.googleusercontent.com",
+		"client_id": "42574466945-eim9vrta04t5a2sms5iiudou7of4rlma.apps.googleusercontent.com",
 		"scopes": [
 			"https://www.googleapis.com/auth/userinfo.email",
 			"https://www.googleapis.com/auth/userinfo.profile",
