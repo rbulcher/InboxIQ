@@ -1,9 +1,5 @@
 import { Storage } from "./storage.js";
-import {
-	getEmailThreadIdFromPage,
-	getEmails,
-	getNumberOfUnreadEmails,
-} from "./utils/emailUtil.js";
+import { getEmailThreadIdFromPage, getEmails } from "./utils/emailUtil.js";
 import { callOpenAIAPI, callOpenAIChatAPI } from "./utils/openAiUtil.js";
 import {
 	initializeSubscription,
@@ -14,51 +10,7 @@ import {
 document.addEventListener("DOMContentLoaded", function () {
 	initializePopup();
 	initializeSubscription();
-	chrome.storage.sync.get(["emailUnreadCount"], function (result) {
-		if (result.emailUnreadCount) {
-			updateBadge(true);
-		}
-	});
 });
-
-function applyMessageColors() {
-	const messages = document.querySelectorAll(".message");
-	const totalMessages = messages.length;
-
-	messages.forEach((message, index) => {
-		const progress = index / (totalMessages - 1);
-		const color = getGradientColor(progress);
-		message.style.backgroundColor = color;
-	});
-}
-
-function getGradientColor(progress) {
-	const start = [110, 0, 255]; // RGB for #6E00FF (Dark purple)
-	const end = [255, 55, 223]; // RGB for #ff37df (Pink)
-
-	const r = Math.round(start[0] * (1 - progress) + end[0] * progress);
-	const g = Math.round(start[1] * (1 - progress) + end[1] * progress);
-	const b = Math.round(start[2] * (1 - progress) + end[2] * progress);
-
-	return `rgb(${r}, ${g}, ${b})`;
-}
-
-async function updateBadge(isEnabled) {
-	if (isEnabled) {
-		try {
-			const unreadCount = await getNumberOfUnreadEmails();
-			const badgeText = unreadCount > 99 ? "99+" : unreadCount.toString();
-			chrome.action.setBadgeText({ text: badgeText });
-			chrome.action.setBadgeBackgroundColor({ color: "#b137df" });
-		} catch (error) {
-			console.error("Error fetching unread count:", error);
-			chrome.action.setBadgeText({ text: "!" });
-			chrome.action.setBadgeBackgroundColor({ color: "#ff0000" });
-		}
-	} else {
-		chrome.action.setBadgeText({ text: "" });
-	}
-}
 
 async function initializeConversationLifetime() {
 	const lifetimeSelect = document.getElementById("conversationLifetime");
@@ -266,50 +218,11 @@ async function initializePopup() {
 
 	mainContainer.style.display = "flex";
 
-	getUserInfo();
 	checkGmailDomain();
 
 	await updateUserStatusDisplay();
 	await initializeConversationLifetime();
 	await deleteExpiredConversations();
-
-	function getUserInfo() {
-		chrome.identity.getAuthToken({ interactive: true }, function (token) {
-			if (chrome.runtime.lastError) {
-				console.error(chrome.runtime.lastError);
-				updateSettingsTitle(null);
-				return;
-			}
-
-			fetch("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
-				headers: { Authorization: `Bearer ${token}` },
-			})
-				.then((response) => response.json())
-				.then((data) => {
-					if (data.name) {
-						updateSettingsTitle(data.name);
-					} else if (data.email) {
-						const userName = data.email.split("@")[0];
-						updateSettingsTitle(userName);
-					} else {
-						console.log("User information not available");
-						updateSettingsTitle(null);
-					}
-				})
-				.catch((error) => {
-					console.error("Error fetching user info:", error);
-					updateSettingsTitle(null);
-				});
-		});
-	}
-
-	emailUnreadCount.addEventListener("change", function () {
-		const isEnabled = this.checked;
-		chrome.storage.sync.set({ emailUnreadCount: isEnabled }, function () {
-			console.log("Email Unread Count setting saved:", isEnabled);
-			updateBadge(isEnabled);
-		});
-	});
 
 	async function deleteAllConversations() {
 		if (confirm("Are you sure you want to delete all conversations?")) {
@@ -317,23 +230,6 @@ async function initializePopup() {
 			updateConversationList();
 			chatWindow.innerHTML = "";
 			showSummarizeButton();
-		}
-	}
-
-	// Load saved Email Unread Count setting
-	chrome.storage.sync.get(["emailUnreadCount"], function (result) {
-		if (result.emailUnreadCount !== undefined) {
-			emailUnreadCount.checked = result.emailUnreadCount;
-			updateBadge(result.emailUnreadCount);
-		}
-	});
-
-	function updateSettingsTitle(userName) {
-		const settingsTitle = document.getElementById("settingsTitle");
-		if (userName) {
-			settingsTitle.textContent = `Hello, ${userName}`;
-		} else {
-			settingsTitle.textContent = "Settings";
 		}
 	}
 

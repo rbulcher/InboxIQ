@@ -94,7 +94,6 @@ body, html {
   font-size: 16px;
   word-wrap: break-word;
   line-height: 1.4;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   letter-spacing: 0.2px;
 }
   
@@ -310,7 +309,7 @@ body, html {
   }
   
   .setting-item {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     max-width: 80%;
   }
   

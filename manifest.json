@@ -33,13 +33,5 @@
 			"js": ["ExtPay.js"]
 		}
 	],
-	"permissions": ["identity", "storage", "tabs"],
-	"oauth2": {
-		"client_id": "42574466945-eim9vrta04t5a2sms5iiudou7of4rlma.apps.googleusercontent.com",
-		"scopes": [
-			"https://www.googleapis.com/auth/userinfo.email",
-			"https://www.googleapis.com/auth/userinfo.profile",
-			"https://www.googleapis.com/auth/gmail.readonly"
-		]
-	}
+	"permissions": ["storage", "tabs"]
 }
